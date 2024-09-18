@@ -140,8 +140,12 @@
         fetch('annotation.json') // Replace with the actual path to your JSON file
             .then(response => response.json())
             .then(data => {
-                // Group data by coordinates
+                // Filter and group data by coordinates, ensuring yfull is 'j1'
                 const groupedData = data.reduce((acc, item) => {
+                    if (item.yfull !== 'j1') {
+                        return acc; // Skip items where yfull is not 'j1'
+                    }
+
                     const key = `${item.lat},${item.long}`;
                     if (!acc[key]) {
                         acc[key] = [];
