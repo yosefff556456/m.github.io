@@ -6,21 +6,44 @@
     <title>Leaflet Map with JSON Data</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
         #map {
             height: 600px;
             width: 100%;
         }
         .popup-content {
             max-width: 300px;
+            font-size: 14px;
+            line-height: 1.5;
         }
         .popup-content ul {
             list-style-type: none;
             padding: 0;
+            margin: 0;
+        }
+        .popup-content ul li {
+            margin: 5px 0;
         }
         .popup-content ul li a {
             display: block;
-            padding: 5px;
+            padding: 8px;
             text-decoration: none;
+            color: #007bff;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+        .popup-content ul li a:hover {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .popup-content .details {
+            margin-top: 10px;
+            border-top: 1px solid #dee2e6;
+            padding-top: 10px;
         }
     </style>
 </head>
@@ -51,69 +74,69 @@
                     return acc;
                 }, {});
 
-                // Add markers to the map
-                for (const [key, items] of Object.entries(groupedData)) {
-                    const [lat, long] = key.split(',').map(Number);
-                    
+                // Function to generate popup content
+                function generatePopupContent(items) {
                     let popupContent = '';
 
                     if (items.length > 1) {
-                        // Create a list for multiple items
                         popupContent += '<ul>';
                         items.forEach((item, index) => {
                             popupContent += `<li><a href="#" class="item-link" data-index="${index}">Item ${index + 1}</a></li>`;
                         });
                         popupContent += '</ul>';
-                        popupContent += '<div id="item-details"></div>';
-                        
-                        // Add the popup content to the marker
-                        const marker = L.marker([lat, long]).addTo(map);
-                        marker.bindPopup(popupContent);
-
-                        // Add event listeners for navigation
-                        marker.on('popupopen', () => {
-                            document.querySelectorAll('.item-link').forEach(link => {
-                                link.addEventListener('click', function(event) {
-                                    event.preventDefault();
-                                    const index = this.getAttribute('data-index');
-                                    const item = items[index];
-                                    const details = `
-                                        <b>ID:</b> ${item.id}<br>
-                                        <b>Group:</b> ${item.group}<br>
-                                        <b>Country:</b> ${item.country}<br>
-                                        <b>Date:</b> ${item.date}<br>
-                                        <b>Sex:</b> ${item.sex}<br>
-                                        <b>ISOGG:</b> ${item.isogg}<br>
-                                        <b>YFull:</b> ${item.yfull}<br>
-                                        <b>Mito:</b> ${item.mito}<br>
-                                        <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
-                                        <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
-                                        <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
-                                    `;
-                                    document.getElementById('item-details').innerHTML = details;
-                                });
-                            });
-                        });
+                        popupContent += '<div class="details" id="item-details"></div>';
                     } else {
-                        // Display single item
                         const item = items[0];
                         popupContent = `
-                            <b>ID:</b> ${item.id}<br>
-                            <b>Group:</b> ${item.group}<br>
-                            <b>Country:</b> ${item.country}<br>
-                            <b>Date:</b> ${item.date}<br>
-                            <b>Sex:</b> ${item.sex}<br>
-                            <b>ISOGG:</b> ${item.isogg}<br>
-                            <b>YFull:</b> ${item.yfull}<br>
-                            <b>Mito:</b> ${item.mito}<br>
-                            <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
-                            <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
-                            <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
+                            <div><b>ID:</b> ${item.id}</div>
+                            <div><b>Group:</b> ${item.group}</div>
+                            <div><b>Country:</b> ${item.country}</div>
+                            <div><b>Date:</b> ${item.date}</div>
+                            <div><b>Sex:</b> ${item.sex}</div>
+                            <div><b>ISOGG:</b> ${item.isogg}</div>
+                            <div><b>YFull:</b> ${item.yfull}</div>
+                            <div><b>Mito:</b> ${item.mito}</div>
+                            <div><b>Skin:</b> ${item.skin || 'N/A'}</div>
+                            <div><b>Hair:</b> ${item.hair || 'N/A'}</div>
+                            <div><b>Eyes:</b> ${item.eyes || 'N/A'}</div>
                         `;
-                        L.marker([lat, long])
-                            .addTo(map)
-                            .bindPopup(popupContent);
                     }
+
+                    return popupContent;
+                }
+
+                // Add markers to the map
+                for (const [key, items] of Object.entries(groupedData)) {
+                    const [lat, long] = key.split(',').map(Number);
+
+                    // Create and bind the marker with popup
+                    const marker = L.marker([lat, long]).addTo(map);
+                    marker.bindPopup(generatePopupContent(items));
+
+                    // Add event listeners for navigation
+                    marker.on('popupopen', () => {
+                        document.querySelectorAll('.item-link').forEach(link => {
+                            link.addEventListener('click', function(event) {
+                                event.preventDefault();
+                                const index = this.getAttribute('data-index');
+                                const item = items[index];
+                                const details = `
+                                    <div><b>ID:</b> ${item.id}</div>
+                                    <div><b>Group:</b> ${item.group}</div>
+                                    <div><b>Country:</b> ${item.country}</div>
+                                    <div><b>Date:</b> ${item.date}</div>
+                                    <div><b>Sex:</b> ${item.sex}</div>
+                                    <div><b>ISOGG:</b> ${item.isogg}</div>
+                                    <div><b>YFull:</b> ${item.yfull}</div>
+                                    <div><b>Mito:</b> ${item.mito}</div>
+                                    <div><b>Skin:</b> ${item.skin || 'N/A'}</div>
+                                    <div><b>Hair:</b> ${item.hair || 'N/A'}</div>
+                                    <div><b>Eyes:</b> ${item.eyes || 'N/A'}</div>
+                                `;
+                                document.getElementById('item-details').innerHTML = details;
+                            });
+                        });
+                    });
                 }
             })
             .catch(error => console.error('Error loading the JSON file:', error));
