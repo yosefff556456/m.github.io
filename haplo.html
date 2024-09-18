@@ -2,11 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Branch Diagram</title>
+    <title>Styled Branch Diagram</title>
     <style>
         body { 
-          font-family: Calibri, Segoe, "Segoe UI", "Gill Sans", "Gill Sans MT", sans-serif;
+            font-family: Calibri, Segoe, "Segoe UI", "Gill Sans", "Gill Sans MT", sans-serif;
         }
 
         .tree, .tree ul, .tree li {
@@ -50,7 +49,6 @@
             padding: .2em .5em;
             position: relative;
         }
-
         .tree code {
             font-family: monaco, Consolas, 'Lucida Console', monospace;
         }
@@ -77,23 +75,23 @@
         .tree > li:after,
         .tree > li > code:before,
         .tree > li > span:before {
-          outline: none;
+            outline: none;
         }
     </style>
 </head>
 <body>
 
-<div id="tree-container"></div>
+<ul class="tree" id="tree-root"></ul>
 
 <script>
-    // Fetch data from Google Sheets
+    // Fetch the data from Google Sheets
     async function fetchData() {
-        const response = await fetch('https://docs.google.com/spreadsheets/d/1JzhlaJTyZy9GSevl9UmaDcWdPRjv1yG7xnO-KhelUiM/export?format=csv&id=1JzhlaJTyZy9GSevl9UmaDcWdPRjv1yG7xnO-KhelUiM');
+        const response = await fetch('https://docs.google.com/spreadsheets/d/1JzhlaJTyZy9GSevl9UmaDcWdPRjv1yG7xnO-KhelUiM/export?format=csv');
         const csvData = await response.text();
         return csvData;
     }
 
-    // Convert CSV to JSON
+    // Convert CSV data into JSON
     function csvToJson(csv) {
         const lines = csv.split('\n');
         const result = [];
@@ -113,7 +111,7 @@
         return result;
     }
 
-    // Create the hierarchical tree structure
+    // Build the hierarchical tree structure
     function createTree(data) {
         const tree = {};
 
@@ -132,41 +130,31 @@
         return tree;
     }
 
-    // Create tree HTML structure
-    function buildTreeHtml(treeData) {
-        const createList = (node) => {
-            const ul = document.createElement('ul');
-            for (const key in node) {
-                const li = document.createElement('li');
-                const span = document.createElement('span');
-                span.textContent = key;
-                li.appendChild(span);
-
-                const childrenUl = createList(node[key]);
-                if (childrenUl) {
-                    li.appendChild(childrenUl);
-                }
-                ul.appendChild(li);
+    // Generate HTML for the tree structure
+    function generateTreeHTML(tree) {
+        let html = '<ul>';
+        for (const node in tree) {
+            html += `<li><span>${node}</span>`;
+            if (Object.keys(tree[node]).length > 0) {
+                html += generateTreeHTML(tree[node]);
             }
-            return ul.children.length ? ul : null;
-        };
-
-        return createList(treeData);
+            html += '</li>';
+        }
+        html += '</ul>';
+        return html;
     }
 
-    // Main function to handle data and rendering
+    // Main function to fetch, parse, and render the tree
     async function main() {
         const csvData = await fetchData();
         const jsonData = csvToJson(csvData);
         const treeData = createTree(jsonData);
-        
-        const treeContainer = document.getElementById('tree-container');
-        const treeHtml = buildTreeHtml(treeData);
-        treeHtml.classList.add('tree');
-        treeContainer.appendChild(treeHtml);
+
+        const treeRoot = document.getElementById('tree-root');
+        treeRoot.innerHTML = generateTreeHTML(treeData);
     }
 
-    // Execute the main function
+    // Initialize the process
     main();
 </script>
 
