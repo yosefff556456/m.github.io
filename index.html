@@ -141,7 +141,7 @@
             .then(response => response.json())
             .then(data => {
                 // Filter data to include only items with yfull equal to 'j1'
-                const filteredData = data.filter(item => item.yfull === 'j1');
+                const filteredData = data.filter(item => item.yfull === 'J1');
 
                 // Group filtered data by coordinates
                 const groupedData = filteredData.reduce((acc, item) => {
