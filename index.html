@@ -11,10 +11,7 @@
             width: 100%;
         }
         .popup-content {
-            width: 300px;
-        }
-        .popup-navigation {
-            margin-top: 10px;
+            max-width: 300px;
         }
     </style>
 </head>
@@ -31,76 +28,82 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        // Initialize a dictionary to store markers by their coordinates
-        var markersByCoord = {};
-
         // Load JSON data from external file
         fetch('annotation.json') // Replace with the actual path to your JSON file
             .then(response => response.json())
             .then(data => {
-                data.forEach(item => {
-                    var coordKey = `${item.lat},${item.long}`;
+                // Group data by coordinates
+                const groupedData = data.reduce((acc, item) => {
+                    const key = `${item.lat},${item.long}`;
+                    if (!acc[key]) {
+                        acc[key] = [];
+                    }
+                    acc[key].push(item);
+                    return acc;
+                }, {});
 
-                    if (!markersByCoord[coordKey]) {
-                        markersByCoord[coordKey] = {
-                            items: [],
-                            marker: L.marker([item.lat, item.long]).addTo(map)
-                        };
+                // Add markers to the map
+                for (const [key, items] of Object.entries(groupedData)) {
+                    const [lat, long] = key.split(',').map(Number);
+                    let popupContent = '';
+
+                    if (items.length > 1) {
+                        // Create a list for multiple items
+                        popupContent += '<ul>';
+                        items.forEach((item, index) => {
+                            popupContent += `<li><a href="#" data-index="${index}">Item ${index + 1}</a></li>`;
+                        });
+                        popupContent += '</ul>';
+                        popupContent += '<div id="item-details"></div>';
+                        
+                        // Add event listeners for navigation
+                        popupContent += `
+                            <script>
+                                document.querySelectorAll('#map .leaflet-popup-content a').forEach(link => {
+                                    link.addEventListener('click', function(event) {
+                                        event.preventDefault();
+                                        const index = this.getAttribute('data-index');
+                                        const item = ${JSON.stringify(items)}[index];
+                                        const details = \`
+                                            <b>ID:</b> \${item.id}<br>
+                                            <b>Group:</b> \${item.group}<br>
+                                            <b>Country:</b> \${item.country}<br>
+                                            <b>Date:</b> \${item.date}<br>
+                                            <b>Sex:</b> \${item.sex}<br>
+                                            <b>ISOGG:</b> \${item.isogg}<br>
+                                            <b>YFull:</b> \${item.yfull}<br>
+                                            <b>Mito:</b> \${item.mito}<br>
+                                            <b>Skin:</b> \${item.skin ? item.skin : 'N/A'}<br>
+                                            <b>Hair:</b> \${item.hair ? item.hair : 'N/A'}<br>
+                                            <b>Eyes:</b> \${item.eyes ? item.eyes : 'N/A'}<br>
+                                        \`;
+                                        document.getElementById('item-details').innerHTML = details;
+                                    });
+                                });
+                            </script>
+                        `;
+                    } else {
+                        // Display single item
+                        const item = items[0];
+                        popupContent = `
+                            <b>ID:</b> ${item.id}<br>
+                            <b>Group:</b> ${item.group}<br>
+                            <b>Country:</b> ${item.country}<br>
+                            <b>Date:</b> ${item.date}<br>
+                            <b>Sex:</b> ${item.sex}<br>
+                            <b>ISOGG:</b> ${item.isogg}<br>
+                            <b>YFull:</b> ${item.yfull}<br>
+                            <b>Mito:</b> ${item.mito}<br>
+                            <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
+                            <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
+                            <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
+                        `;
                     }
 
-                    markersByCoord[coordKey].items.push(item);
-
-                    // Set the popup content to show the first item by default
-                    if (markersByCoord[coordKey].items.length === 1) {
-                        updatePopupContent(markersByCoord[coordKey].marker, markersByCoord[coordKey].items, 0);
-                    }
-                });
-
-                // Bind popup to markers with navigation functionality
-                Object.keys(markersByCoord).forEach(coordKey => {
-                    var dataItems = markersByCoord[coordKey].items;
-                    var marker = markersByCoord[coordKey].marker;
-
-                    marker.on('click', function() {
-                        var currentIndex = 0;
-
-                        function showPopup(index) {
-                            updatePopupContent(marker, dataItems, index);
-                        }
-
-                        function updatePopupContent(marker, items, index) {
-                            var item = items[index];
-                            var popupContent = `
-                                <div class="popup-content">
-                                    <b>ID:</b> ${item.id}<br>
-                                    <b>Group:</b> ${item.group}<br>
-                                    <b>Country:</b> ${item.country}<br>
-                                    <b>Date:</b> ${item.date}<br>
-                                    <b>Sex:</b> ${item.sex}<br>
-                                    <b>ISOGG:</b> ${item.isogg}<br>
-                                    <b>YFull:</b> ${item.yfull}<br>
-                                    <b>Mito:</b> ${item.mito}<br>
-                                    <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
-                                    <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
-                                    <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
-                                    <div class="popup-navigation">
-                                        <button onclick="navigate(-1)">Previous</button>
-                                        <button onclick="navigate(1)">Next</button>
-                                    </div>
-                                </div>
-                            `;
-
-                            marker.bindPopup(popupContent).openPopup();
-
-                            window.navigate = function(direction) {
-                                currentIndex = (currentIndex + direction + items.length) % items.length;
-                                showPopup(currentIndex);
-                            };
-                        }
-
-                        showPopup(currentIndex);
-                    });
-                });
+                    L.marker([lat, long])
+                        .addTo(map)
+                        .bindPopup(popupContent, { maxWidth: 300 });
+                }
             })
             .catch(error => console.error('Error loading the JSON file:', error));
     </script>
