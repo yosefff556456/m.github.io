@@ -10,18 +10,13 @@
             height: 600px;
             width: 100%;
         }
-        #controls {
-            margin: 10px;
+        .popup-content {
+            width: 200px;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="controls">
-        <button id="prev">السابق</button>
-        <span id="current">1</span> من <span id="total">1</span>
-        <button id="next">التالي</button>
-    </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
@@ -33,66 +28,67 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
+        // Object to hold markers and their data
+        var markers = {};
+        var currentMarkerId = null;
+
         // Load JSON data from external file
         fetch('annotation.json') // Replace with the actual path to your JSON file
             .then(response => response.json())
             .then(data => {
-                // Filter data by unique lat/long pairs
-                const groupedData = {};
-
-                data.forEach(item => {
-                    const key = `${item.lat}-${item.long}`;
-                    if (!groupedData[key]) {
-                        groupedData[key] = [];
-                    }
-                    groupedData[key].push(item);
-                });
-
-                // Add markers with controls for each group
-                Object.keys(groupedData).forEach(key => {
-                    const items = groupedData[key];
-                    let currentIndex = 0;
-
-                    // Create marker for the first item
-                    const marker = L.marker([items[0].lat, items[0].long]).addTo(map);
-                    updatePopup(marker, items[currentIndex]);
-
-                    // Setup navigation buttons
-                    const total = items.length;
-                    document.getElementById('total').textContent = total;
-
-                    document.getElementById('next').addEventListener('click', () => {
-                        currentIndex = (currentIndex + 1) % total;
-                        updatePopup(marker, items[currentIndex]);
-                        document.getElementById('current').textContent = currentIndex + 1;
-                    });
-
-                    document.getElementById('prev').addEventListener('click', () => {
-                        currentIndex = (currentIndex - 1 + total) % total;
-                        updatePopup(marker, items[currentIndex]);
-                        document.getElementById('current').textContent = currentIndex + 1;
-                    });
-                });
-
-                // Function to update popup content
-                function updatePopup(marker, item) {
-                    const popupContent = `
-                        <b>ID:</b> ${item.id}<br>
-                        <b>Group:</b> ${item.group}<br>
-                        <b>Country:</b> ${item.country}<br>
-                        <b>Date:</b> ${item.date}<br>
-                        <b>Sex:</b> ${item.sex}<br>
-                        <b>ISOGG:</b> ${item.isogg}<br>
-                        <b>YFull:</b> ${item.yfull}<br>
-                        <b>Mito:</b> ${item.mito}<br>
-                        <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
-                        <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
-                        <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
+                data.forEach((item, index) => {
+                    var markerId = `marker_${index}`;
+                    
+                    // Create a popup with navigation buttons
+                    var popupContent = `
+                        <div class="popup-content">
+                            <b>ID:</b> ${item.id}<br>
+                            <b>Group:</b> ${item.group}<br>
+                            <b>Country:</b> ${item.country}<br>
+                            <b>Date:</b> ${item.date}<br>
+                            <b>Sex:</b> ${item.sex}<br>
+                            <b>ISOGG:</b> ${item.isogg}<br>
+                            <b>YFull:</b> ${item.yfull}<br>
+                            <b>Mito:</b> ${item.mito}<br>
+                            <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
+                            <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
+                            <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
+                            <button onclick="prevData('${markerId}')">Previous</button>
+                            <button onclick="nextData('${markerId}')">Next</button>
+                        </div>
                     `;
-                    marker.bindPopup(popupContent).openPopup();
-                }
+
+                    // Add marker to map for each data item
+                    var marker = L.marker([item.lat, item.long])
+                        .addTo(map)
+                        .bindPopup(popupContent)
+                        .on('click', function() {
+                            currentMarkerId = markerId;
+                            marker.openPopup();
+                        });
+
+                    markers[markerId] = { marker: marker, data: item };
+                });
             })
             .catch(error => console.error('Error loading the JSON file:', error));
+
+        function prevData(markerId) {
+            var ids = Object.keys(markers);
+            var index = ids.indexOf(markerId);
+            if (index > 0) {
+                var prevId = ids[index - 1];
+                markers[prevId].marker.openPopup();
+            }
+        }
+
+        function nextData(markerId) {
+            var ids = Object.keys(markers);
+            var index = ids.indexOf(markerId);
+            if (index < ids.length - 1) {
+                var nextId = ids[index + 1];
+                markers[nextId].marker.openPopup();
+            }
+        }
     </script>
 </body>
 </html>
