@@ -2,131 +2,173 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Simple Branch Diagram</title>
-    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Branch Diagram</title>
     <style>
-        .node {
-            stroke: #000;
-            stroke-width: 1.5px;
-            fill: #fff;
+        body { 
+          font-family: Calibri, Segoe, "Segoe UI", "Gill Sans", "Gill Sans MT", sans-serif;
         }
-        .link {
-            stroke: #999;
-            stroke-width: 1.5px;
+
+        .tree, .tree ul, .tree li {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            position: relative;
         }
-        text {
-            font-size: 12px;
-            fill: #333;
+
+        .tree {
+            margin: 0 0 1em;
+            text-align: center;
+        }
+        .tree, .tree ul {
+            display: table;
+        }
+        .tree ul {
+          width: 100%;
+        }
+        .tree li {
+            display: table-cell;
+            padding: .5em 0;
+            vertical-align: top;
+        }
+        .tree li:before {
+            outline: solid 1px #666;
+            content: "";
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
+        .tree li:first-child:before {left: 50%;}
+        .tree li:last-child:before {right: 50%;}
+
+        .tree code, .tree span {
+            border: solid .1em #666;
+            border-radius: .2em;
+            display: inline-block;
+            margin: 0 .2em .5em;
+            padding: .2em .5em;
+            position: relative;
+        }
+
+        .tree code {
+            font-family: monaco, Consolas, 'Lucida Console', monospace;
+        }
+
+        .tree ul:before,
+        .tree code:before,
+        .tree span:before {
+            outline: solid 1px #666;
+            content: "";
+            height: .5em;
+            left: 50%;
+            position: absolute;
+        }
+        .tree ul:before {
+            top: -.5em;
+        }
+        .tree code:before,
+        .tree span:before {
+            top: -.55em;
+        }
+
+        .tree > li {margin-top: 0;}
+        .tree > li:before,
+        .tree > li:after,
+        .tree > li > code:before,
+        .tree > li > span:before {
+          outline: none;
         }
     </style>
 </head>
 <body>
-    <svg width="1000" height="800"></svg>
-    <script>
-        // Fetch data from Google Sheets
-        async function fetchData() {
-            const response = await fetch('https://docs.google.com/spreadsheets/d/1JzhlaJTyZy9GSevl9UmaDcWdPRjv1yG7xnO-KhelUiM/export?format=csv&id=1JzhlaJTyZy9GSevl9UmaDcWdPRjv1yG7xnO-KhelUiM');
-            const csvData = await response.text();
-            return csvData;
-        }
 
-        // Convert CSV to JSON
-        function csvToJson(csv) {
-            const lines = csv.split('\n');
-            const result = [];
-            const headers = lines[0].split(',');
+<div id="tree-container"></div>
 
-            for (let i = 1; i < lines.length; i++) {
-                const obj = {};
-                const currentLine = lines[i].split(',');
+<script>
+    // Fetch data from Google Sheets
+    async function fetchData() {
+        const response = await fetch('https://docs.google.com/spreadsheets/d/1JzhlaJTyZy9GSevl9UmaDcWdPRjv1yG7xnO-KhelUiM/export?format=csv&id=1JzhlaJTyZy9GSevl9UmaDcWdPRjv1yG7xnO-KhelUiM');
+        const csvData = await response.text();
+        return csvData;
+    }
 
-                for (let j = 0; j < headers.length; j++) {
-                    obj[headers[j]] = currentLine[j];
-                }
+    // Convert CSV to JSON
+    function csvToJson(csv) {
+        const lines = csv.split('\n');
+        const result = [];
+        const headers = lines[0].split(',');
 
-                if (obj[headers[0]]) result.push(obj);
+        for (let i = 1; i < lines.length; i++) {
+            const obj = {};
+            const currentLine = lines[i].split(',');
+
+            for (let j = 0; j < headers.length; j++) {
+                obj[headers[j]] = currentLine[j];
             }
 
-            return result;
+            if (obj[headers[0]]) result.push(obj);
         }
 
-        // Create the hierarchical tree structure
-        function createTree(data) {
-            const tree = {};
+        return result;
+    }
 
-            data.forEach(entry => {
-                const path = entry.mutationInfo.split('>').filter(Boolean);
-                let currentNode = tree;
+    // Create the hierarchical tree structure
+    function createTree(data) {
+        const tree = {};
 
-                path.forEach(haplogroup => {
-                    if (!currentNode[haplogroup]) {
-                        currentNode[haplogroup] = {};
-                    }
-                    currentNode = currentNode[haplogroup];
-                });
+        data.forEach(entry => {
+            const path = entry.mutationInfo.split('>').filter(Boolean);
+            let currentNode = tree;
+
+            path.forEach(haplogroup => {
+                if (!currentNode[haplogroup]) {
+                    currentNode[haplogroup] = {};
+                }
+                currentNode = currentNode[haplogroup];
             });
+        });
 
-            return tree;
-        }
+        return tree;
+    }
 
-        // Transform tree into hierarchical format for D3
-        function hierarchyData(node, name) {
-            const children = Object.keys(node).map(key => hierarchyData(node[key], key));
-            return {
-                name,
-                children: children.length ? children : undefined
-            };
-        }
+    // Create tree HTML structure
+    function buildTreeHtml(treeData) {
+        const createList = (node) => {
+            const ul = document.createElement('ul');
+            for (const key in node) {
+                const li = document.createElement('li');
+                const span = document.createElement('span');
+                span.textContent = key;
+                li.appendChild(span);
 
-        // Draw the tree using D3
-        function drawTree(treeData) {
-            const svg = d3.select('svg');
-            const width = +svg.attr('width');
-            const height = +svg.attr('height');
+                const childrenUl = createList(node[key]);
+                if (childrenUl) {
+                    li.appendChild(childrenUl);
+                }
+                ul.appendChild(li);
+            }
+            return ul.children.length ? ul : null;
+        };
 
-            const treeLayout = d3.tree().size([width - 160, height - 160]);
-            const rootNode = d3.hierarchy(treeData);
-            treeLayout(rootNode);
+        return createList(treeData);
+    }
 
-            // Add links
-            svg.selectAll('.link')
-                .data(rootNode.links())
-                .enter()
-                .append('line')
-                .attr('class', 'link')
-                .attr('x1', d => d.source.x + 80)
-                .attr('y1', d => d.source.y + 80)
-                .attr('x2', d => d.target.x + 80)
-                .attr('y2', d => d.target.y + 80);
+    // Main function to handle data and rendering
+    async function main() {
+        const csvData = await fetchData();
+        const jsonData = csvToJson(csvData);
+        const treeData = createTree(jsonData);
+        
+        const treeContainer = document.getElementById('tree-container');
+        const treeHtml = buildTreeHtml(treeData);
+        treeHtml.classList.add('tree');
+        treeContainer.appendChild(treeHtml);
+    }
 
-            // Add nodes
-            const node = svg.selectAll('.node')
-                .data(rootNode.descendants())
-                .enter()
-                .append('g')
-                .attr('class', 'node')
-                .attr('transform', d => `translate(${d.x + 80},${d.y + 80})`);
+    // Execute the main function
+    main();
+</script>
 
-            node.append('circle')
-                .attr('r', 20);
-
-            node.append('text')
-                .attr('dy', 5)
-                .attr('text-anchor', 'middle')
-                .text(d => d.data.name);
-        }
-
-        // Main function to handle data and drawing
-        async function main() {
-            const csvData = await fetchData();
-            const jsonData = csvToJson(csvData);
-            const treeData = createTree(jsonData);
-            const hierarchicalData = hierarchyData(treeData, 'Root');
-            drawTree(hierarchicalData);
-        }
-
-        // Execute the main function
-        main();
-    </script>
 </body>
 </html>
