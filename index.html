@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -10,23 +10,17 @@
             height: 600px;
             width: 100%;
         }
-        .navigation-buttons {
-            display: flex;
-            justify-content: center;
-            margin-top: 10px;
-        }
-        .navigation-buttons button {
-            margin: 0 10px;
-            padding: 5px 10px;
-            cursor: pointer;
+        #controls {
+            margin: 10px;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div class="navigation-buttons">
-        <button id="prev">Previous</button>
-        <button id="next">Next</button>
+    <div id="controls">
+        <button id="prev">السابق</button>
+        <span id="current">1</span> من <span id="total">1</span>
+        <button id="next">التالي</button>
     </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -39,81 +33,66 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        let currentIndex = 0; // To track the current data displayed
-        let marker = null;
-        let groupedData = {}; // To group the data by location
-
         // Load JSON data from external file
         fetch('annotation.json') // Replace with the actual path to your JSON file
             .then(response => response.json())
             .then(data => {
-                // Group data by the same coordinates (lat and long)
+                // Filter data by unique lat/long pairs
+                const groupedData = {};
+
                 data.forEach(item => {
-                    let key = `${item.lat},${item.long}`;
+                    const key = `${item.lat}-${item.long}`;
                     if (!groupedData[key]) {
                         groupedData[key] = [];
                     }
                     groupedData[key].push(item);
                 });
 
-                // Add markers for each unique location
+                // Add markers with controls for each group
                 Object.keys(groupedData).forEach(key => {
-                    let [lat, long] = key.split(',').map(Number);
-                    let locationData = groupedData[key];
+                    const items = groupedData[key];
+                    let currentIndex = 0;
 
-                    // Add marker for the location
-                    let marker = L.marker([lat, long]).addTo(map);
+                    // Create marker for the first item
+                    const marker = L.marker([items[0].lat, items[0].long]).addTo(map);
+                    updatePopup(marker, items[currentIndex]);
 
-                    // Bind popup to the marker and display the first item by default
-                    marker.bindPopup(displayData(locationData[currentIndex]));
+                    // Setup navigation buttons
+                    const total = items.length;
+                    document.getElementById('total').textContent = total;
 
-                    marker.on('click', function() {
-                        currentIndex = 0; // Reset index when the marker is clicked
-                        updatePopup(marker, locationData);
+                    document.getElementById('next').addEventListener('click', () => {
+                        currentIndex = (currentIndex + 1) % total;
+                        updatePopup(marker, items[currentIndex]);
+                        document.getElementById('current').textContent = currentIndex + 1;
+                    });
+
+                    document.getElementById('prev').addEventListener('click', () => {
+                        currentIndex = (currentIndex - 1 + total) % total;
+                        updatePopup(marker, items[currentIndex]);
+                        document.getElementById('current').textContent = currentIndex + 1;
                     });
                 });
+
+                // Function to update popup content
+                function updatePopup(marker, item) {
+                    const popupContent = `
+                        <b>ID:</b> ${item.id}<br>
+                        <b>Group:</b> ${item.group}<br>
+                        <b>Country:</b> ${item.country}<br>
+                        <b>Date:</b> ${item.date}<br>
+                        <b>Sex:</b> ${item.sex}<br>
+                        <b>ISOGG:</b> ${item.isogg}<br>
+                        <b>YFull:</b> ${item.yfull}<br>
+                        <b>Mito:</b> ${item.mito}<br>
+                        <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
+                        <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
+                        <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
+                    `;
+                    marker.bindPopup(popupContent).openPopup();
+                }
             })
             .catch(error => console.error('Error loading the JSON file:', error));
-
-        // Display data in the popup
-        function displayData(item) {
-            return `
-                <b>ID:</b> ${item.id}<br>
-                <b>Group:</b> ${item.group}<br>
-                <b>Country:</b> ${item.country}<br>
-                <b>Date:</b> ${item.date}<br>
-                <b>Sex:</b> ${item.sex}<br>
-                <b>ISOGG:</b> ${item.isogg}<br>
-                <b>YFull:</b> ${item.yfull}<br>
-                <b>Mito:</b> ${item.mito}<br>
-                <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
-                <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
-                <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
-            `;
-        }
-
-        // Update the popup with new data based on currentIndex
-        function updatePopup(marker, locationData) {
-            marker.setPopupContent(displayData(locationData[currentIndex]));
-            marker.openPopup();
-        }
-
-        // Add event listeners for navigation buttons
-        document.getElementById('prev').addEventListener('click', () => {
-            let locationData = groupedData[`${marker.getLatLng().lat},${marker.getLatLng().lng}`];
-            if (locationData && currentIndex > 0) {
-                currentIndex--;
-                updatePopup(marker, locationData);
-            }
-        });
-
-        document.getElementById('next').addEventListener('click', () => {
-            let locationData = groupedData[`${marker.getLatLng().lat},${marker.getLatLng().lng}`];
-            if (locationData && currentIndex < locationData.length - 1) {
-                currentIndex++;
-                updatePopup(marker, locationData);
-            }
-        });
     </script>
 </body>
 </html>
