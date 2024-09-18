@@ -47,12 +47,6 @@
         .node text {
             pointer-events: none;
         }
-        .count {
-            font-size: 10px;
-            fill: #ffffff;
-            text-anchor: middle;
-            dominant-baseline: middle;
-        }
         .node {
             cursor: pointer;
         }
@@ -72,8 +66,8 @@
                 header: true,
                 complete: function(results) {
                     const data = results.data;
-                    const { treeData, mutationCounts } = buildTreeData(data);
-                    drawTree(treeData, mutationCounts);
+                    const treeData = buildTreeData(data);
+                    drawTree(treeData);
                 },
                 error: function(error) {
                     console.error('Error loading CSV data:', error);
@@ -96,7 +90,7 @@
                             currentNode.children.push(nodes[mutation]);
                         }
                         currentNode = nodes[mutation];
-                        if (index === mutations.length - 2) {
+                        if (index === mutations.length - 1) {
                             if (!mutationCounts[mutation]) {
                                 mutationCounts[mutation] = 0;
                             }
@@ -112,10 +106,10 @@
                     }
                 });
 
-                return { treeData: tree, mutationCounts };
+                return tree;
             }
 
-            function drawTree(treeData, mutationCounts) {
+            function drawTree(treeData) {
                 const width = window.innerWidth;
                 const height = window.innerHeight;
                 const svg = d3.select('#tree').append('svg')
@@ -152,7 +146,7 @@
                 node.append('circle').attr('r', 10);
 
                 node.append('text')
-                    .attr('dy', 4)
+                    .attr('dy', '0.35em')
                     .text(d => d.data.count ? d.data.count : '');
 
                 node.append('title').text(d => {
