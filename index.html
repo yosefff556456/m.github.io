@@ -45,6 +45,24 @@
             border-top: 1px solid #dee2e6;
             padding-top: 10px;
         }
+        .navigation-buttons {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .navigation-buttons button {
+            padding: 5px 10px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .navigation-buttons button:disabled {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -61,7 +79,7 @@
         }).addTo(map);
 
         // Function to generate popup content
-        function generatePopupContent(items) {
+        function generatePopupContent(items, marker) {
             let popupContent = '';
 
             if (items.length > 1) {
@@ -71,6 +89,55 @@
                 });
                 popupContent += '</ul>';
                 popupContent += '<div class="details" id="item-details"></div>';
+                popupContent += '<div class="navigation-buttons">';
+                popupContent += '<button id="prev-btn" disabled>&lt; Previous</button>';
+                popupContent += '<button id="next-btn">Next &gt;</button>';
+                popupContent += '</div>';
+
+                // Add event listeners for navigation buttons
+                document.querySelector('#popup-container').addEventListener('popupopen', () => {
+                    const prevBtn = document.getElementById('prev-btn');
+                    const nextBtn = document.getElementById('next-btn');
+                    let currentIndex = 0;
+
+                    function updateDetails(index) {
+                        const item = items[index];
+                        const details = `
+                            <div><b>ID:</b> ${item.id}</div>
+                            <div><b>Group:</b> ${item.group}</div>
+                            <div><b>Country:</b> ${item.country}</div>
+                            <div><b>Date:</b> ${item.date}</div>
+                            <div><b>Sex:</b> ${item.sex}</div>
+                            <div><b>ISOGG:</b> ${item.isogg}</div>
+                            <div><b>YFull:</b> ${item.yfull}</div>
+                            <div><b>Mito:</b> ${item.mito}</div>
+                            <div><b>Skin:</b> ${item.skin || 'N/A'}</div>
+                            <div><b>Hair:</b> ${item.hair || 'N/A'}</div>
+                            <div><b>Eyes:</b> ${item.eyes || 'N/A'}</div>
+                        `;
+                        document.getElementById('item-details').innerHTML = details;
+
+                        prevBtn.disabled = (index === 0);
+                        nextBtn.disabled = (index === items.length - 1);
+                    }
+
+                    document.getElementById('prev-btn').addEventListener('click', () => {
+                        if (currentIndex > 0) {
+                            currentIndex--;
+                            updateDetails(currentIndex);
+                        }
+                    });
+
+                    document.getElementById('next-btn').addEventListener('click', () => {
+                        if (currentIndex < items.length - 1) {
+                            currentIndex++;
+                            updateDetails(currentIndex);
+                        }
+                    });
+
+                    updateDetails(currentIndex); // Initial details
+                });
+
             } else {
                 const item = items[0];
                 popupContent = `
@@ -111,31 +178,14 @@
 
                     // Create and bind the marker with popup
                     const marker = L.marker([lat, long]).addTo(map);
-                    marker.bindPopup(generatePopupContent(items));
+                    marker.bindPopup('<div id="popup-container">' + generatePopupContent(items, marker) + '</div>');
 
-                    // Add event listeners for navigation in the popup
+                    // Event listener for popup open
                     marker.on('popupopen', () => {
-                        document.querySelectorAll('.item-link').forEach(link => {
-                            link.addEventListener('click', function(event) {
-                                event.preventDefault();
-                                const index = this.getAttribute('data-index');
-                                const item = items[index];
-                                const details = `
-                                    <div><b>ID:</b> ${item.id}</div>
-                                    <div><b>Group:</b> ${item.group}</div>
-                                    <div><b>Country:</b> ${item.country}</div>
-                                    <div><b>Date:</b> ${item.date}</div>
-                                    <div><b>Sex:</b> ${item.sex}</div>
-                                    <div><b>ISOGG:</b> ${item.isogg}</div>
-                                    <div><b>YFull:</b> ${item.yfull}</div>
-                                    <div><b>Mito:</b> ${item.mito}</div>
-                                    <div><b>Skin:</b> ${item.skin || 'N/A'}</div>
-                                    <div><b>Hair:</b> ${item.hair || 'N/A'}</div>
-                                    <div><b>Eyes:</b> ${item.eyes || 'N/A'}</div>
-                                `;
-                                document.getElementById('item-details').innerHTML = details;
-                            });
-                        });
+                        const popupContainer = document.getElementById('popup-container');
+                        if (popupContainer) {
+                            popupContainer.dispatchEvent(new Event('popupopen'));
+                        }
                     });
                 }
             })
