@@ -146,12 +146,8 @@
             .then(data => {
                 console.log('Original Data:', data); // Debug: Check raw data
 
-                // Filter data to include only items where yfull starts with 'J1'
-                const filteredData = data.filter(item => item.yfull && item.yfull.toUpperCase().startsWith('J1'));
-                console.log('Filtered Data:', filteredData); // Debug: Check filtered data
-
-                // Group filtered data by coordinates
-                const groupedData = filteredData.reduce((acc, item) => {
+                // Group data by coordinates
+                const groupedData = data.reduce((acc, item) => {
                     const key = `${item.lat},${item.long}`;
                     if (!acc[key]) {
                         acc[key] = [];
