@@ -26,15 +26,14 @@
             fill: #3498db;
             stroke: #2c3e50;
             stroke-width: 2px;
-            r: 10;
             transition: fill 0.3s ease;
         }
         .node circle:hover {
             fill: #2ecc71;
         }
         .node text {
-            font-size: 14px;
-            fill: #34495e;
+            font-size: 12px;
+            fill: #ffffff;
             text-anchor: middle;
             dominant-baseline: central;
         }
@@ -54,7 +53,6 @@
             text-anchor: middle;
             dominant-baseline: middle;
         }
-        /* Zoom interaction */
         .node {
             cursor: pointer;
         }
@@ -74,8 +72,8 @@
                 header: true,
                 complete: function(results) {
                     const data = results.data;
-                    const { treeData, haplogroupCounts } = buildTreeData(data);
-                    drawTree(treeData, haplogroupCounts);
+                    const { treeData, mutationCounts } = buildTreeData(data);
+                    drawTree(treeData, mutationCounts);
                 },
                 error: function(error) {
                     console.error('Error loading CSV data:', error);
@@ -83,36 +81,48 @@
             });
 
             function buildTreeData(data) {
-                let tree = { name: 'j', children: [] };
+                let tree = { name: 'j', children: [], count: 0 };
                 let nodes = { 'j': tree };
-                let haplogroupCounts = {};
+                let mutationCounts = {};
 
                 data.forEach(row => {
                     if (!row['mutationInfo']) return;
-                    const mutations = row['mutationInfo'].split('>').filter(m => m); // Filter out empty strings
+                    const mutations = row['mutationInfo'].split('>').filter(Boolean);
                     let currentNode = nodes['j'];
 
                     mutations.forEach((mutation, index) => {
                         if (!nodes[mutation]) {
-                            nodes[mutation] = { name: mutation, children: [], samples: [] };
+                            nodes[mutation] = { name: mutation, children: [], samples: [], count: 0 };
                             currentNode.children.push(nodes[mutation]);
                         }
                         currentNode = nodes[mutation];
-                        // Count haplogroup only if it's the last one before the last '>'
                         if (index === mutations.length - 2) {
-                            haplogroupCounts[mutation] = (haplogroupCounts[mutation] || 0) + 1;
+                            if (!mutationCounts[mutation]) {
+                                mutationCounts[mutation] = 0;
+                            }
+                            mutationCounts[mutation]++;
                         }
                     });
                     currentNode.samples.push({ name: row['personInfo'], location: row['locationInfo'] });
                 });
 
-                return { treeData: tree, haplogroupCounts };
+                Object.keys(nodes).forEach(key => {
+                    if (mutationCounts[key]) {
+                        nodes[key].count = mutationCounts[key];
+                    }
+                });
+
+                return { treeData: tree, mutationCounts };
             }
 
-            function drawTree(treeData, haplogroupCounts) {
+            function drawTree(treeData, mutationCounts) {
                 const width = window.innerWidth;
                 const height = window.innerHeight;
-                const svg = d3.select('#tree').append('svg').attr('width', width).attr('height', height).append('g');
+                const svg = d3.select('#tree').append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .append('g')
+                    .attr('transform', 'translate(100, 100)');
 
                 const root = d3.hierarchy(treeData);
                 const treeLayout = d3.tree().size([width - 200, height - 200]);
@@ -141,20 +151,18 @@
 
                 node.append('circle').attr('r', 10);
 
-                node.append('text').attr('dy', 20).text(d => d.data.name);
-
-                // Add count text above the circle
                 node.append('text')
-                    .attr('class', 'count')
-                    .attr('dy', -15)
-                    .text(d => haplogroupCounts[d.data.name] || '');
+                    .attr('dy', 4)
+                    .text(d => d.data.count ? d.data.count : '');
 
                 node.append('title').text(d => {
                     if (!d.data.samples) return '';
                     return d.data.samples.map(s => `${s.name} (${s.location})`).join('\n');
                 });
 
-                const zoom = d3.zoom().scaleExtent([0.5, 3]).translateExtent([[-width, -height], [2 * width, 2 * height]])
+                const zoom = d3.zoom()
+                    .scaleExtent([0.5, 3])
+                    .translateExtent([[-width, -height], [2 * width, 2 * height]])
                     .on("zoom", (event) => svg.attr("transform", event.transform));
 
                 d3.select("svg").call(zoom);
