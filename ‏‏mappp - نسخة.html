@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet Map with JSON Data</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        #map {
+            height: 100vh; /* Full height viewport */
+            width: 100%;
+        }
+        .popup-content {
+            max-width: 350px; /* Increased width for better readability */
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .popup-content ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .popup-content ul li {
+            margin: 5px 0;
+        }
+        .popup-content ul li a {
+            display: block;
+            padding: 8px;
+            text-decoration: none;
+            color: #007bff;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+        .popup-content ul li a:hover {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .popup-content .details {
+            margin-top: 10px;
+            border-top: 1px solid #dee2e6;
+            padding-top: 10px;
+        }
+        .navigation-buttons {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .navigation-buttons button {
+            padding: 5px 10px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .navigation-buttons button:disabled {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+        .navigation-buttons button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map and set its view
+        const map = L.map('map').setView([59.3828, 27.3639], 10);
+
+        // Add tile layer to the map
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Function to generate popup content
+        function generatePopupContent(items) {
+            if (items.length === 1) {
+                const item = items[0];
+                return `
+                    <div class="popup-content">
+                        <div><b>ID:</b> ${item.id}</div>
+                        <div><b>Group:</b> ${item.group}</div>
+                        <div><b>Country:</b> ${item.country}</div>
+                        <div><b>Date:</b> ${item.date}</div>
+                        <div><b>Sex:</b> ${item.sex}</div>
+                        <div><b>ISOGG:</b> ${item.isogg}</div>
+                        <div><b>YFull:</b> ${item.yfull}</div>
+                        <div><b>Mito:</b> ${item.mito}</div>
+                        <div><b>Skin:</b> ${item.skin || 'N/A'}</div>
+                        <div><b>Hair:</b> ${item.hair || 'N/A'}</div>
+                        <div><b>Eyes:</b> ${item.eyes || 'N/A'}</div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="popup-content">
+                        <ul>${items.map((item, index) => 
+                            `<li><a href="#" class="item-link" data-index="${index}">Item ${index + 1}</a></li>`
+                        ).join('')}</ul>
+                        <div class="details" id="item-details"></div>
+                        <div class="navigation-buttons">
+                            <button id="prev-btn" disabled>&lt; Previous</button>
+                            <button id="next-btn">Next &gt;</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Function to update details
+        function updateDetails(index, items) {
+            const item = items[index];
+            const detailsDiv = document.getElementById('item-details');
+            detailsDiv.innerHTML = `
+                <div><b>ID:</b> ${item.id}</div>
+                <div><b>Group:</b> ${item.group}</div>
+                <div><b>Country:</b> ${item.country}</div>
+                <div><b>Date:</b> ${item.date}</div>
+                <div><b>Sex:</b> ${item.sex}</div>
+                <div><b>ISOGG:</b> ${item.isogg}</div>
+                <div><b>YFull:</b> ${item.yfull}</div>
+                <div><b>Mito:</b> ${item.mito}</div>
+                <div><b>Skin:</b> ${item.skin || 'N/A'}</div>
+                <div><b>Hair:</b> ${item.hair || 'N/A'}</div>
+                <div><b>Eyes:</b> ${item.eyes || 'N/A'}</div>
+            `;
+        }
+
+        // Load JSON data from external file
+        fetch('annotation.json') // Replace with the actual path to your JSON file
+            .then(response => response.json())
+            .then(data => {
+                // Group data by coordinates
+                const groupedData = data.reduce((acc, item) => {
+                    const key = `${item.lat},${item.long}`;
+                    if (!acc[key]) {
+                        acc[key] = [];
+                    }
+                    acc[key].push(item);
+                    return acc;
+                }, {});
+
+                // Add markers to the map
+                Object.entries(groupedData).forEach(([key, items]) => {
+                    const [lat, long] = key.split(',').map(Number);
+
+                    // Create and bind the marker with popup
+                    const marker = L.marker([lat, long]).addTo(map);
+                    marker.bindPopup(generatePopupContent(items));
+
+                    marker.on('popupopen', () => {
+                        const container = document.querySelector('.popup-content');
+                        if (container) {
+                            const prevBtn = container.querySelector('#prev-btn');
+                            const nextBtn = container.querySelector('#next-btn');
+                            const itemLinks = container.querySelectorAll('.item-link');
+
+                            let currentIndex = 0;
+
+                            function updateNavigation() {
+                                prevBtn.disabled = (currentIndex === 0);
+                                nextBtn.disabled = (currentIndex === items.length - 1);
+                            }
+
+                            itemLinks.forEach(link => {
+                                link.addEventListener('click', function(event) {
+                                    event.preventDefault();
+                                    currentIndex = parseInt(this.getAttribute('data-index'));
+                                    updateDetails(currentIndex, items);
+                                    updateNavigation();
+                                });
+                            });
+
+                            prevBtn.addEventListener('click', () => {
+                                if (currentIndex > 0) {
+                                    currentIndex--;
+                                    updateDetails(currentIndex, items);
+                                    updateNavigation();
+                                }
+                            });
+
+                            nextBtn.addEventListener('click', () => {
+                                if (currentIndex < items.length - 1) {
+                                    currentIndex++;
+                                    updateDetails(currentIndex, items);
+                                    updateNavigation();
+                                }
+                            });
+
+                            updateDetails(currentIndex, items); // Initial details
+                            updateNavigation(); // Initial navigation button state
+                        }
+                    });
+                });
+            })
+            .catch(error => console.error('Error loading the JSON file:', error));
+    </script>
+</body>
+</html>
