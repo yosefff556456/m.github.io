@@ -29,27 +29,54 @@
         fetch('annotation.json') // Replace with the actual path to your JSON file
             .then(response => response.json())
             .then(data => {
-                // Assuming data is an array of objects
-                data.forEach(item => {
-                    // Add marker to map for each data item
-                    var popupContent = `
-                        <b>ID:</b> ${item.id}<br>
-                        <b>Group:</b> ${item.group}<br>
-                        <b>Country:</b> ${item.country}<br>
-                        <b>Date:</b> ${item.date}<br>
-                        <b>Sex:</b> ${item.sex}<br>
-                        <b>ISOGG:</b> ${item.isogg}<br>
-                        <b>YFull:</b> ${item.yfull}<br>
-                        <b>Mito:</b> ${item.mito}<br>
-                        <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
-                        <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
-                        <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
-                    `;
+                // Create a dictionary to group data by coordinates
+                const markers = {};
 
-                    L.marker([item.lat, item.long])
+                // Process each item in the data
+                data.forEach(item => {
+                    const coords = [item.lat, item.long];
+                    const key = coords.join(',');
+
+                    // Initialize the group if it doesn't exist
+                    if (!markers[key]) {
+                        markers[key] = [];
+                    }
+
+                    // Add item to the group
+                    markers[key].push(item);
+                });
+
+                // Add markers to the map
+                for (const key in markers) {
+                    const items = markers[key];
+                    const coords = key.split(',').map(Number);
+
+                    // Prepare content for the popup
+                    let popupContent = '<h4>Data:</h4>';
+                    items.forEach(item => {
+                        popupContent += `
+                            <div>
+                                <b>ID:</b> ${item.id}<br>
+                                <b>Group:</b> ${item.group}<br>
+                                <b>Country:</b> ${item.country}<br>
+                                <b>Date:</b> ${item.date}<br>
+                                <b>Sex:</b> ${item.sex}<br>
+                                <b>ISOGG:</b> ${item.isogg}<br>
+                                <b>YFull:</b> ${item.yfull}<br>
+                                <b>Mito:</b> ${item.mito}<br>
+                                <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
+                                <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
+                                <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
+                                <hr>
+                            </div>
+                        `;
+                    });
+
+                    // Add marker with combined popup content
+                    L.marker(coords)
                         .addTo(map)
                         .bindPopup(popupContent);
-                });
+                }
             })
             .catch(error => console.error('Error loading the JSON file:', error));
     </script>
