@@ -12,11 +12,11 @@
             background-color: #f5f5f5;
         }
         #map {
-            height: 100vh; /* Full height viewport */
+            height: 100vh;
             width: 100%;
         }
         .popup-content {
-            max-width: 350px; /* Increased width for better readability */
+            max-width: 350px;
             font-size: 14px;
             line-height: 1.5;
         }
@@ -33,8 +33,8 @@
             padding: 8px;
             text-decoration: none;
             color: #007bff;
-            border-radius: 4px;
             background-color: #e9ecef;
+            border-radius: 4px;
         }
         .popup-content ul li a:hover {
             background-color: #007bff;
@@ -85,6 +85,7 @@
         // Function to generate popup content
         function generatePopupContent(items) {
             if (items.length === 1) {
+                // For a single item, no navigation or list, just show details
                 const item = items[0];
                 return `
                     <div class="popup-content">
@@ -102,6 +103,7 @@
                     </div>
                 `;
             } else {
+                // For multiple items, add a list with navigation buttons
                 return `
                     <div class="popup-content">
                         <ul>${items.map((item, index) => 
@@ -117,23 +119,25 @@
             }
         }
 
-        // Function to update details
+        // Function to update details of the currently selected item
         function updateDetails(index, items) {
             const item = items[index];
             const detailsDiv = document.getElementById('item-details');
-            detailsDiv.innerHTML = `
-                <div><b>ID:</b> ${item.id}</div>
-                <div><b>Group:</b> ${item.group}</div>
-                <div><b>Country:</b> ${item.country}</div>
-                <div><b>Date:</b> ${item.date}</div>
-                <div><b>Sex:</b> ${item.sex}</div>
-                <div><b>ISOGG:</b> ${item.isogg}</div>
-                <div><b>YFull:</b> ${item.yfull}</div>
-                <div><b>Mito:</b> ${item.mito}</div>
-                <div><b>Skin:</b> ${item.skin || 'N/A'}</div>
-                <div><b>Hair:</b> ${item.hair || 'N/A'}</div>
-                <div><b>Eyes:</b> ${item.eyes || 'N/A'}</div>
-            `;
+            if (detailsDiv) {
+                detailsDiv.innerHTML = `
+                    <div><b>ID:</b> ${item.id}</div>
+                    <div><b>Group:</b> ${item.group}</div>
+                    <div><b>Country:</b> ${item.country}</div>
+                    <div><b>Date:</b> ${item.date}</div>
+                    <div><b>Sex:</b> ${item.sex}</div>
+                    <div><b>ISOGG:</b> ${item.isogg}</div>
+                    <div><b>YFull:</b> ${item.yfull}</div>
+                    <div><b>Mito:</b> ${item.mito}</div>
+                    <div><b>Skin:</b> ${item.skin || 'N/A'}</div>
+                    <div><b>Hair:</b> ${item.hair || 'N/A'}</div>
+                    <div><b>Eyes:</b> ${item.eyes || 'N/A'}</div>
+                `;
+            }
         }
 
         // Load JSON data from external file
@@ -142,7 +146,7 @@
             .then(data => {
                 console.log('Original Data:', data); // Debug: Check raw data
 
-                // Filter data to include only items where yfull starts with 'J1' (case-insensitive)
+                // Filter data to include only items where yfull starts with 'J1'
                 const filteredData = data.filter(item => item.yfull && item.yfull.toUpperCase().startsWith('J1'));
                 console.log('Filtered Data:', filteredData); // Debug: Check filtered data
 
@@ -176,10 +180,13 @@
                             let currentIndex = 0;
 
                             function updateNavigation() {
-                                prevBtn.disabled = (currentIndex === 0);
-                                nextBtn.disabled = (currentIndex === items.length - 1);
+                                if (prevBtn && nextBtn) {
+                                    prevBtn.disabled = (currentIndex === 0);
+                                    nextBtn.disabled = (currentIndex === items.length - 1);
+                                }
                             }
 
+                            // Update details when a list item is clicked
                             itemLinks.forEach(link => {
                                 link.addEventListener('click', function(event) {
                                     event.preventDefault();
@@ -189,24 +196,30 @@
                                 });
                             });
 
-                            prevBtn.addEventListener('click', () => {
-                                if (currentIndex > 0) {
-                                    currentIndex--;
-                                    updateDetails(currentIndex, items);
-                                    updateNavigation();
-                                }
-                            });
+                            // Previous and next button navigation
+                            if (prevBtn) {
+                                prevBtn.addEventListener('click', () => {
+                                    if (currentIndex > 0) {
+                                        currentIndex--;
+                                        updateDetails(currentIndex, items);
+                                        updateNavigation();
+                                    }
+                                });
+                            }
 
-                            nextBtn.addEventListener('click', () => {
-                                if (currentIndex < items.length - 1) {
-                                    currentIndex++;
-                                    updateDetails(currentIndex, items);
-                                    updateNavigation();
-                                }
-                            });
+                            if (nextBtn) {
+                                nextBtn.addEventListener('click', () => {
+                                    if (currentIndex < items.length - 1) {
+                                        currentIndex++;
+                                        updateDetails(currentIndex, items);
+                                        updateNavigation();
+                                    }
+                                });
+                            }
 
-                            updateDetails(currentIndex, items); // Initial details
-                            updateNavigation(); // Initial navigation button state
+                            // Initialize the details and navigation
+                            updateDetails(currentIndex, items);
+                            updateNavigation();
                         }
                     });
                 });
