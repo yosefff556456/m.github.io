@@ -80,18 +80,24 @@
                 let tree = { name: 'j', children: [], counts: {} };
                 let nodes = { 'j': tree };
 
+                // Count the number of times each haplogroup is the last one in the rows
                 data.forEach(row => {
                     if (!row['mutationInfo']) return;
                     const mutations = row['mutationInfo'].split('>');
+                    const lastMutation = mutations[mutations.length - 1];
+
+                    if (!nodes[lastMutation]) {
+                        nodes[lastMutation] = { name: lastMutation, children: [], samples: [], counts: 0 };
+                        tree.children.push(nodes[lastMutation]);
+                    }
+
+                    nodes[lastMutation].counts++;
                     let currentNode = nodes['j'];
 
-                    mutations.forEach((mutation, index) => {
+                    mutations.forEach(mutation => {
                         if (!nodes[mutation]) {
-                            nodes[mutation] = { name: mutation, children: [], samples: [], counts: 0 };
+                            nodes[mutation] = { name: mutation, children: [], samples: [] };
                             currentNode.children.push(nodes[mutation]);
-                        }
-                        if (index === mutations.length - 1) {
-                            nodes[mutation].counts++;
                         }
                         currentNode = nodes[mutation];
                     });
@@ -133,7 +139,7 @@
 
                 node.append('circle').attr('r', 10);
 
-                // Add text with counts
+                // Add count text inside circles
                 node.append('text')
                     .attr('dy', 4) // Adjust vertical position for count
                     .text(d => d.data.counts > 0 ? d.data.counts : '');
