@@ -24,79 +24,91 @@
 <body>
     <div id="tree"></div>
     <script>
-        // Load data from Google Sheets CSV
-        d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vRnDqmeMrSFgOBL5MHbulxNw7F9PO4PZBFXtBqEyPmiljTZWQCTwakxKiRneckhvknl-jpvOeR7PuJT/pub?output=csv").then(function(data) {
-            // Parse the data
-            let mutations = {};
-            data.forEach(d => {
-                let mutationsList = d.mutationInfo.split('>');
-                let current = mutations;
-                mutationsList.forEach(mutation => {
-                    if (!current[mutation]) {
-                        current[mutation] = { samples: [], children: {} };
-                    }
-                    current[mutation].samples.push({ person: d.personInfo, location: d.locationInfo });
-                    current = current[mutation].children;
-                });
-            });
+        async function loadAndDrawTree() {
+            try {
+                const data = await d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vRnDqmeMrSFgOBL5MHbulxNw7F9PO4PZBFXtBqEyPmiljTZWQCTwakxKiRneckhvknl-jpvOeR7PuJT/pub?output=csv");
 
-            // Convert the mutation data to a format suitable for D3
-            function convertToHierarchy(data, name) {
-                let result = { name: name, children: [] };
-                Object.keys(data).forEach(key => {
-                    let child = convertToHierarchy(data[key].children, key);
-                    if (child) {
-                        result.children.push(child);
-                    }
+                // Step 1: Process data
+                let mutations = {};
+                data.forEach(d => {
+                    let mutationsList = d.mutationInfo.split('>');
+                    let current = mutations;
+                    mutationsList.forEach(mutation => {
+                        if (!current[mutation]) {
+                            current[mutation] = { samples: [], children: {} };
+                        }
+                        current[mutation].samples.push({ person: d.personInfo, location: d.locationInfo });
+                        current = current[mutation].children;
+                    });
                 });
-                if (result.children.length === 0) {
-                    result.samples = data[name].samples;
+
+                // Step 2: Convert data to hierarchical format
+                function convertToHierarchy(data, name) {
+                    let result = { name: name, children: [] };
+                    Object.keys(data).forEach(key => {
+                        let child = convertToHierarchy(data[key].children, key);
+                        if (child) {
+                            result.children.push(child);
+                        }
+                    });
+                    if (result.children.length === 0) {
+                        result.samples = data[name].samples;
+                    }
+                    return result;
                 }
-                return result;
+                
+                const hierarchyData = convertToHierarchy(mutations, "root");
+
+                // Step 3: Create SVG and tree layout
+                const width = 960, height = 600;
+                const svg = d3.select("#tree").append("svg")
+                    .attr("width", width)
+                    .attr("height", height)
+                    .append("g")
+                    .attr("transform", "translate(40,0)");
+
+                const root = d3.hierarchy(hierarchyData);
+                const treeLayout = d3.tree().size([height - 200, width - 160]);
+                treeLayout(root);
+
+                // Step 4: Draw links
+                svg.selectAll(".link")
+                    .data(root.descendants().slice(1))
+                    .enter().append("path")
+                    .attr("class", "link")
+                    .attr("d", d => `
+                        M${d.y},${d.x}
+                        C${d.parent.y + 100},${d.x}
+                        ${d.parent.y + 100},${d.parent.x}
+                        ${d.parent.y},${d.parent.x}
+                    `);
+
+                // Step 5: Draw nodes
+                const node = svg.selectAll(".node")
+                    .data(root.descendants())
+                    .enter().append("g")
+                    .attr("class", "node")
+                    .attr("transform", d => `translate(${d.y},${d.x})`);
+
+                node.append("circle").attr("r", 4.5);
+                node.append("text")
+                    .attr("dy", 3)
+                    .attr("x", d => d.children ? -8 : 8)
+                    .style("text-anchor", d => d.children ? "end" : "start")
+                    .text(d => {
+                        let text = d.data.name;
+                        if (d.data.samples) {
+                            text += ' (' + d.data.samples.map(s => s.person + ': ' + s.location).join(', ') + ')';
+                        }
+                        return text;
+                    });
+                
+            } catch (error) {
+                console.error('Error loading the CSV file:', error);
             }
-            
-            const hierarchyData = convertToHierarchy(mutations, "root");
+        }
 
-            // Create tree layout
-            const width = 960, height = 600;
-            const svg = d3.select("#tree").append("svg")
-                .attr("width", width)
-                .attr("height", height)
-                .append("g")
-                .attr("transform", "translate(40,0)");
-
-            const root = d3.hierarchy(hierarchyData);
-            const treeLayout = d3.tree().size([height - 200, width - 160]);
-            treeLayout(root);
-
-            // Create links
-            svg.selectAll(".link")
-                .data(root.descendants().slice(1))
-                .enter().append("path")
-                .attr("class", "link")
-                .attr("d", d => `
-                    M${d.y},${d.x}
-                    C${d.parent.y + 100},${d.x}
-                    ${d.parent.y + 100},${d.parent.x}
-                    ${d.parent.y},${d.parent.x}
-                `);
-
-            // Create nodes
-            const node = svg.selectAll(".node")
-                .data(root.descendants())
-                .enter().append("g")
-                .attr("class", "node")
-                .attr("transform", d => `translate(${d.y},${d.x})`);
-
-            node.append("circle").attr("r", 4.5);
-            node.append("text")
-                .attr("dy", 3)
-                .attr("x", d => d.children ? -8 : 8)
-                .style("text-anchor", d => d.children ? "end" : "start")
-                .text(d => `${d.data.name}${d.data.samples ? ' (' + d.data.samples.map(s => s.person + ': ' + s.location).join(', ') + ')' : ''}`);
-        }).catch(function(error) {
-            console.error('Error loading the CSV file:', error);
-        });
+        loadAndDrawTree();
     </script>
 </body>
 </html>
