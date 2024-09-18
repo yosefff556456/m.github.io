@@ -32,8 +32,8 @@
             fill: #2ecc71;
         }
         .node text {
-            font-size: 14px;
-            fill: #34495e;
+            font-size: 12px;
+            fill: #ffffff;
             text-anchor: middle;
             dominant-baseline: central;
         }
@@ -81,7 +81,7 @@
 
                 data.forEach(row => {
                     if (!row['mutationInfo']) return;
-                    const mutations = row['mutationInfo'].split('>');
+                    const mutations = row['mutationInfo'].split('>').filter(Boolean);
                     let currentNode = nodes['j'];
 
                     mutations.forEach((mutation, index) => {
