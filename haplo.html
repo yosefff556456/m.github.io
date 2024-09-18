@@ -152,12 +152,12 @@
 
                 node.append('text')
                     .attr('class', 'count')
-                    .attr('dy', '-1.5em') // Position above the circle
+                    .attr('dy', '.3em')
                     .text(d => d.data.count ? d.data.count : '');
 
                 node.append('text')
                     .attr('class', 'name')
-                    .attr('dy', '-2.5em') // Position further above the circle
+                    .attr('dy', '1.5em')
                     .text(d => d.data.name || '');
 
                 node.append('title').text(d => {
