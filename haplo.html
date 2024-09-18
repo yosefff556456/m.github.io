@@ -14,10 +14,10 @@
             stroke-width: 2px;
         }
         .label {
-            font-size: 12px;
+            font-size: 14px;
         }
         svg {
-            font: 12px sans-serif;
+            font: 14px sans-serif;
         }
         text {
             pointer-events: none;
@@ -27,10 +27,13 @@
             stroke: #3498db;
             stroke-width: 2px;
         }
-        circle {
+        /* Customize the mutation nodes */
+        .node rect {
             fill: #e74c3c;
             stroke: #c0392b;
             stroke-width: 2px;
+            rx: 6; /* Rounded corners */
+            ry: 6;
         }
         /* Container for the SVG */
         #tree {
@@ -45,11 +48,7 @@
         .node text {
             font-size: 14px;
             fill: #34495e;
-            dominant-baseline: central; /* Vertically center text */
-            alignment-baseline: middle; /* Align text centrally with the circle */
-        }
-        .node circle {
-            r: 8; /* Increase radius for better visibility */
+            dominant-baseline: middle; /* Vertically center text */
         }
     </style>
 </head>
@@ -127,15 +126,20 @@
                     .attr('class', 'node')
                     .attr('transform', d => `translate(${d.x},${d.y})`);
 
-                node.append('circle')
-                    .attr('r', 8); // Increase radius for better visibility
+                // Replace circle with a background rectangle
+                node.append('rect')
+                    .attr('x', -40)  // Adjust x to center the rectangle
+                    .attr('y', -12)  // Adjust y to position rectangle vertically
+                    .attr('width', d => d.data.name.length * 8 + 20)  // Dynamic width based on text length
+                    .attr('height', 24)  // Height of the rectangle
+                    .attr('rx', 6)
+                    .attr('ry', 6);  // Rounded corners
 
                 node.append('text')
-                    .attr('dy', 0) // Center vertically with the circle
-                    .attr('y', 20) // Adjust position if necessary
+                    .attr('dy', 4) // Center vertically within the rectangle
                     .text(d => d.data.name);
 
-                // Add samples information
+                // Add samples information as tooltips
                 node.append('title')
                     .text(d => {
                         if (!d.data.samples) return '';
