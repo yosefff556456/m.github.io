@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet Map with JSON Data</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Create the map and set its view
+        var map = L.map('map').setView([59.3828, 27.3639], 10);
+
+        // Add a tile layer to the map
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Load JSON data from external file
+        fetch('annotation.json') // Replace with the actual path to your JSON file
+            .then(response => response.json())
+            .then(data => {
+                // Assuming data is an array of objects
+                data.forEach(item => {
+                    // Add marker to map for each data item
+                    var popupContent = `
+                        <b>ID:</b> ${item.id}<br>
+                        <b>Group:</b> ${item.group}<br>
+                        <b>Country:</b> ${item.country}<br>
+                        <b>Date:</b> ${item.date}<br>
+                        <b>Sex:</b> ${item.sex}<br>
+                        <b>ISOGG:</b> ${item.isogg}<br>
+                        <b>YFull:</b> ${item.yfull}<br>
+                        <b>Mito:</b> ${item.mito}<br>
+                        <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
+                        <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
+                        <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
+                    `;
+
+                    L.marker([item.lat, item.long])
+                        .addTo(map)
+                        .bindPopup(popupContent);
+                });
+            })
+            .catch(error => console.error('Error loading the JSON file:', error));
+    </script>
+</body>
+</html>
