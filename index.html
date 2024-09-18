@@ -142,8 +142,8 @@
             .then(data => {
                 console.log('Original Data:', data); // Debug: Check raw data
 
-                // Filter data to include only items with yfull equal to 'j1'
-                const filteredData = data.filter(item => item.yfull === 'J1');
+                // Filter data to include only items where yfull starts with 'J1' (case-insensitive)
+                const filteredData = data.filter(item => item.yfull && item.yfull.toUpperCase().startsWith('J1'));
                 console.log('Filtered Data:', filteredData); // Debug: Check filtered data
 
                 // Group filtered data by coordinates
