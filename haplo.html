@@ -26,14 +26,15 @@
             fill: #3498db;
             stroke: #2c3e50;
             stroke-width: 2px;
+            r: 10;
             transition: fill 0.3s ease;
         }
         .node circle:hover {
             fill: #2ecc71;
         }
         .node text {
-            font-size: 12px;
-            fill: #ffffff;
+            font-size: 14px;
+            fill: #34495e;
             text-anchor: middle;
             dominant-baseline: central;
         }
@@ -47,6 +48,13 @@
         .node text {
             pointer-events: none;
         }
+        .count {
+            font-size: 10px;
+            fill: #ffffff;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+        /* Zoom interaction */
         .node {
             cursor: pointer;
         }
@@ -66,8 +74,8 @@
                 header: true,
                 complete: function(results) {
                     const data = results.data;
-                    const treeData = buildTreeData(data);
-                    drawTree(treeData);
+                    const { treeData, haplogroupCounts } = buildTreeData(data);
+                    drawTree(treeData, haplogroupCounts);
                 },
                 error: function(error) {
                     console.error('Error loading CSV data:', error);
@@ -75,45 +83,36 @@
             });
 
             function buildTreeData(data) {
-                let tree = { name: 'j', children: [], count: 0 };
+                let tree = { name: 'j', children: [] };
                 let nodes = { 'j': tree };
-                let mutationCounts = {};
+                let haplogroupCounts = {};
 
                 data.forEach(row => {
                     if (!row['mutationInfo']) return;
-                    const mutations = row['mutationInfo'].split('>').filter(Boolean);
+                    const mutations = row['mutationInfo'].split('>').filter(m => m); // Filter out empty strings
                     let currentNode = nodes['j'];
 
                     mutations.forEach((mutation, index) => {
                         if (!nodes[mutation]) {
-                            nodes[mutation] = { name: mutation, children: [], samples: [], count: 0 };
+                            nodes[mutation] = { name: mutation, children: [], samples: [] };
                             currentNode.children.push(nodes[mutation]);
                         }
                         currentNode = nodes[mutation];
-                        if (index === mutations.length - 1) {
-                            if (!mutationCounts[mutation]) {
-                                mutationCounts[mutation] = 0;
-                            }
-                            mutationCounts[mutation]++;
+                        // Count haplogroup only if it's the last one before the last '>'
+                        if (index === mutations.length - 2) {
+                            haplogroupCounts[mutation] = (haplogroupCounts[mutation] || 0) + 1;
                         }
                     });
                     currentNode.samples.push({ name: row['personInfo'], location: row['locationInfo'] });
                 });
 
-                Object.keys(nodes).forEach(key => {
-                    if (mutationCounts[key]) {
-                        nodes[key].count = mutationCounts[key];
-                    }
-                });
-
-                return tree;
+                return { treeData: tree, haplogroupCounts };
             }
 
-            function drawTree(treeData) {
+            function drawTree(treeData, haplogroupCounts) {
                 const width = window.innerWidth;
                 const height = window.innerHeight;
-                const svg = d3.select('#tree').append('svg').attr('width', width).attr('height', height)
-                    .append('g').attr('transform', 'translate(100, 100)');
+                const svg = d3.select('#tree').append('svg').attr('width', width).attr('height', height).append('g');
 
                 const root = d3.hierarchy(treeData);
                 const treeLayout = d3.tree().size([width - 200, height - 200]);
@@ -142,9 +141,13 @@
 
                 node.append('circle').attr('r', 10);
 
+                node.append('text').attr('dy', 20).text(d => d.data.name);
+
+                // Add count text above the circle
                 node.append('text')
-                    .attr('dy', 4)
-                    .text(d => d.data.count ? d.data.count : '');
+                    .attr('class', 'count')
+                    .attr('dy', -15)
+                    .text(d => haplogroupCounts[d.data.name] || '');
 
                 node.append('title').text(d => {
                     if (!d.data.samples) return '';
