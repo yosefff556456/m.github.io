@@ -13,6 +13,15 @@
         .popup-content {
             max-width: 300px;
         }
+        .popup-content ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .popup-content ul li a {
+            display: block;
+            padding: 5px;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
@@ -45,43 +54,46 @@
                 // Add markers to the map
                 for (const [key, items] of Object.entries(groupedData)) {
                     const [lat, long] = key.split(',').map(Number);
+                    
                     let popupContent = '';
 
                     if (items.length > 1) {
                         // Create a list for multiple items
                         popupContent += '<ul>';
                         items.forEach((item, index) => {
-                            popupContent += `<li><a href="#" data-index="${index}">Item ${index + 1}</a></li>`;
+                            popupContent += `<li><a href="#" class="item-link" data-index="${index}">Item ${index + 1}</a></li>`;
                         });
                         popupContent += '</ul>';
                         popupContent += '<div id="item-details"></div>';
                         
+                        // Add the popup content to the marker
+                        const marker = L.marker([lat, long]).addTo(map);
+                        marker.bindPopup(popupContent);
+
                         // Add event listeners for navigation
-                        popupContent += `
-                            <script>
-                                document.querySelectorAll('#map .leaflet-popup-content a').forEach(link => {
-                                    link.addEventListener('click', function(event) {
-                                        event.preventDefault();
-                                        const index = this.getAttribute('data-index');
-                                        const item = ${JSON.stringify(items)}[index];
-                                        const details = \`
-                                            <b>ID:</b> \${item.id}<br>
-                                            <b>Group:</b> \${item.group}<br>
-                                            <b>Country:</b> \${item.country}<br>
-                                            <b>Date:</b> \${item.date}<br>
-                                            <b>Sex:</b> \${item.sex}<br>
-                                            <b>ISOGG:</b> \${item.isogg}<br>
-                                            <b>YFull:</b> \${item.yfull}<br>
-                                            <b>Mito:</b> \${item.mito}<br>
-                                            <b>Skin:</b> \${item.skin ? item.skin : 'N/A'}<br>
-                                            <b>Hair:</b> \${item.hair ? item.hair : 'N/A'}<br>
-                                            <b>Eyes:</b> \${item.eyes ? item.eyes : 'N/A'}<br>
-                                        \`;
-                                        document.getElementById('item-details').innerHTML = details;
-                                    });
+                        marker.on('popupopen', () => {
+                            document.querySelectorAll('.item-link').forEach(link => {
+                                link.addEventListener('click', function(event) {
+                                    event.preventDefault();
+                                    const index = this.getAttribute('data-index');
+                                    const item = items[index];
+                                    const details = `
+                                        <b>ID:</b> ${item.id}<br>
+                                        <b>Group:</b> ${item.group}<br>
+                                        <b>Country:</b> ${item.country}<br>
+                                        <b>Date:</b> ${item.date}<br>
+                                        <b>Sex:</b> ${item.sex}<br>
+                                        <b>ISOGG:</b> ${item.isogg}<br>
+                                        <b>YFull:</b> ${item.yfull}<br>
+                                        <b>Mito:</b> ${item.mito}<br>
+                                        <b>Skin:</b> ${item.skin ? item.skin : 'N/A'}<br>
+                                        <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
+                                        <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
+                                    `;
+                                    document.getElementById('item-details').innerHTML = details;
                                 });
-                            </script>
-                        `;
+                            });
+                        });
                     } else {
                         // Display single item
                         const item = items[0];
@@ -98,11 +110,10 @@
                             <b>Hair:</b> ${item.hair ? item.hair : 'N/A'}<br>
                             <b>Eyes:</b> ${item.eyes ? item.eyes : 'N/A'}<br>
                         `;
+                        L.marker([lat, long])
+                            .addTo(map)
+                            .bindPopup(popupContent);
                     }
-
-                    L.marker([lat, long])
-                        .addTo(map)
-                        .bindPopup(popupContent, { maxWidth: 300 });
                 }
             })
             .catch(error => console.error('Error loading the JSON file:', error));
