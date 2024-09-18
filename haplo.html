@@ -18,6 +18,7 @@
             justify-content: center;
             align-items: center;
             background-color: #ffffff;
+            overflow: hidden; /* Hide overflow to prevent scrollbars */
         }
         svg {
             font: 12px sans-serif;
@@ -167,7 +168,10 @@
                 const zoom = d3.zoom()
                     .scaleExtent([0.5, 3])
                     .translateExtent([[-width, -height], [2 * width, 2 * height]])
-                    .on("zoom", (event) => svg.attr("transform", event.transform));
+                    .on("zoom", (event) => {
+                        svg.attr("transform", event.transform);
+                        svg.selectAll('text').style('font-size', `${12 / event.transform.k}px`);
+                    });
 
                 d3.select("svg").call(zoom);
             }
