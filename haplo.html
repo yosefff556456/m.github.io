@@ -2,113 +2,131 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Tree</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <title>Simple Branch Diagram</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
     <style>
-        .node circle {
-            fill: #fff;
+        .node {
             stroke: #000;
             stroke-width: 1.5px;
-        }
-        .node text {
-            font: 10px sans-serif;
+            fill: #fff;
         }
         .link {
-            fill: none;
-            stroke: #ccc;
+            stroke: #999;
             stroke-width: 1.5px;
+        }
+        text {
+            font-size: 12px;
+            fill: #333;
         }
     </style>
 </head>
 <body>
-    <div id="tree"></div>
+    <svg width="1000" height="800"></svg>
     <script>
-        async function loadAndDrawTree() {
-            try {
-                const data = await d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vRnDqmeMrSFgOBL5MHbulxNw7F9PO4PZBFXtBqEyPmiljTZWQCTwakxKiRneckhvknl-jpvOeR7PuJT/pub?output=csv");
-
-                // Step 1: Process data
-                let mutations = {};
-                data.forEach(d => {
-                    let mutationsList = d.mutationInfo.split('>');
-                    let current = mutations;
-                    mutationsList.forEach(mutation => {
-                        if (!current[mutation]) {
-                            current[mutation] = { samples: [], children: {} };
-                        }
-                        current[mutation].samples.push({ person: d.personInfo, location: d.locationInfo });
-                        current = current[mutation].children;
-                    });
-                });
-
-                // Step 2: Convert data to hierarchical format
-                function convertToHierarchy(data, name) {
-                    let result = { name: name, children: [] };
-                    Object.keys(data).forEach(key => {
-                        let child = convertToHierarchy(data[key].children, key);
-                        if (child) {
-                            result.children.push(child);
-                        }
-                    });
-                    if (result.children.length === 0) {
-                        result.samples = data[name].samples;
-                    }
-                    return result;
-                }
-                
-                const hierarchyData = convertToHierarchy(mutations, "root");
-
-                // Step 3: Create SVG and tree layout
-                const width = 960, height = 600;
-                const svg = d3.select("#tree").append("svg")
-                    .attr("width", width)
-                    .attr("height", height)
-                    .append("g")
-                    .attr("transform", "translate(40,0)");
-
-                const root = d3.hierarchy(hierarchyData);
-                const treeLayout = d3.tree().size([height - 200, width - 160]);
-                treeLayout(root);
-
-                // Step 4: Draw links
-                svg.selectAll(".link")
-                    .data(root.descendants().slice(1))
-                    .enter().append("path")
-                    .attr("class", "link")
-                    .attr("d", d => `
-                        M${d.y},${d.x}
-                        C${d.parent.y + 100},${d.x}
-                        ${d.parent.y + 100},${d.parent.x}
-                        ${d.parent.y},${d.parent.x}
-                    `);
-
-                // Step 5: Draw nodes
-                const node = svg.selectAll(".node")
-                    .data(root.descendants())
-                    .enter().append("g")
-                    .attr("class", "node")
-                    .attr("transform", d => `translate(${d.y},${d.x})`);
-
-                node.append("circle").attr("r", 4.5);
-                node.append("text")
-                    .attr("dy", 3)
-                    .attr("x", d => d.children ? -8 : 8)
-                    .style("text-anchor", d => d.children ? "end" : "start")
-                    .text(d => {
-                        let text = d.data.name;
-                        if (d.data.samples) {
-                            text += ' (' + d.data.samples.map(s => s.person + ': ' + s.location).join(', ') + ')';
-                        }
-                        return text;
-                    });
-                
-            } catch (error) {
-                console.error('Error loading the CSV file:', error);
-            }
+        // Fetch data from Google Sheets
+        async function fetchData() {
+            const response = await fetch('https://docs.google.com/spreadsheets/d/1JzhlaJTyZy9GSevl9UmaDcWdPRjv1yG7xnO-KhelUiM/export?format=csv&id=1JzhlaJTyZy9GSevl9UmaDcWdPRjv1yG7xnO-KhelUiM');
+            const csvData = await response.text();
+            return csvData;
         }
 
-        loadAndDrawTree();
+        // Convert CSV to JSON
+        function csvToJson(csv) {
+            const lines = csv.split('\n');
+            const result = [];
+            const headers = lines[0].split(',');
+
+            for (let i = 1; i < lines.length; i++) {
+                const obj = {};
+                const currentLine = lines[i].split(',');
+
+                for (let j = 0; j < headers.length; j++) {
+                    obj[headers[j]] = currentLine[j];
+                }
+
+                if (obj[headers[0]]) result.push(obj);
+            }
+
+            return result;
+        }
+
+        // Create the hierarchical tree structure
+        function createTree(data) {
+            const tree = {};
+
+            data.forEach(entry => {
+                const path = entry.mutationInfo.split('>').filter(Boolean);
+                let currentNode = tree;
+
+                path.forEach(haplogroup => {
+                    if (!currentNode[haplogroup]) {
+                        currentNode[haplogroup] = {};
+                    }
+                    currentNode = currentNode[haplogroup];
+                });
+            });
+
+            return tree;
+        }
+
+        // Transform tree into hierarchical format for D3
+        function hierarchyData(node, name) {
+            const children = Object.keys(node).map(key => hierarchyData(node[key], key));
+            return {
+                name,
+                children: children.length ? children : undefined
+            };
+        }
+
+        // Draw the tree using D3
+        function drawTree(treeData) {
+            const svg = d3.select('svg');
+            const width = +svg.attr('width');
+            const height = +svg.attr('height');
+
+            const treeLayout = d3.tree().size([width - 160, height - 160]);
+            const rootNode = d3.hierarchy(treeData);
+            treeLayout(rootNode);
+
+            // Add links
+            svg.selectAll('.link')
+                .data(rootNode.links())
+                .enter()
+                .append('line')
+                .attr('class', 'link')
+                .attr('x1', d => d.source.x + 80)
+                .attr('y1', d => d.source.y + 80)
+                .attr('x2', d => d.target.x + 80)
+                .attr('y2', d => d.target.y + 80);
+
+            // Add nodes
+            const node = svg.selectAll('.node')
+                .data(rootNode.descendants())
+                .enter()
+                .append('g')
+                .attr('class', 'node')
+                .attr('transform', d => `translate(${d.x + 80},${d.y + 80})`);
+
+            node.append('circle')
+                .attr('r', 20);
+
+            node.append('text')
+                .attr('dy', 5)
+                .attr('text-anchor', 'middle')
+                .text(d => d.data.name);
+        }
+
+        // Main function to handle data and drawing
+        async function main() {
+            const csvData = await fetchData();
+            const jsonData = csvToJson(csvData);
+            const treeData = createTree(jsonData);
+            const hierarchicalData = hierarchyData(treeData, 'Root');
+            drawTree(hierarchicalData);
+        }
+
+        // Execute the main function
+        main();
     </script>
 </body>
 </html>
