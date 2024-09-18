@@ -140,18 +140,11 @@
         fetch('annotation.json') // Replace with the actual path to your JSON file
             .then(response => response.json())
             .then(data => {
-                // Check data structure
-                if (!Array.isArray(data)) {
-                    console.error('Unexpected data format:', data);
-                    return;
-                }
+                // Filter data to include only items with yfull equal to 'j1'
+                const filteredData = data.filter(item => item.yfull === 'j1');
 
-                // Filter and group data by coordinates, ensuring yfull is 'j1'
-                const groupedData = data.reduce((acc, item) => {
-                    if (item.yfull !== 'j1') {
-                        return acc; // Skip items where yfull is not 'j1'
-                    }
-
+                // Group filtered data by coordinates
+                const groupedData = filteredData.reduce((acc, item) => {
                     const key = `${item.lat},${item.long}`;
                     if (!acc[key]) {
                         acc[key] = [];
