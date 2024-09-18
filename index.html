@@ -159,7 +159,7 @@
                     marker.bindPopup(generatePopupContent(items));
 
                     marker.on('popupopen', () => {
-                        const container = document.querySelector('#popup-content-container');
+                        const container = document.querySelector('.popup-content');
                         if (container) {
                             const prevBtn = container.querySelector('#prev-btn');
                             const nextBtn = container.querySelector('#next-btn');
