@@ -39,6 +39,7 @@
 
     const treeLayout = d3.cluster().size([height, width - 160]);
 
+    // Function to build the tree structure from mutation list
     function buildTree(mutationList) {
       const root = {};
 
@@ -57,23 +58,26 @@
       return root;
     }
 
+    // Function to convert the tree to D3.js format
     function convertToD3Format(node, name = "root") {
       const children = Object.keys(node).map(key => convertToD3Format(node[key], key));
       return { name, children };
     }
 
+    // Load CSV data from the URL
     d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vRnDqmeMrSFgOBL5MHbulxNw7F9PO4PZBFXtBqEyPmiljTZWQCTwakxKiRneckhvknl-jpvOeR7PuJT/pub?output=csv").then(function(data) {
       console.log('Data loaded successfully:', data);
 
       // Extract the mutationInfo column
       const mutationInfoData = data.map(d => d[':mutationInfo']);
-
-      // Check the mutationInfoData
       console.log('Mutation info data:', mutationInfoData);
 
       // Build the tree from the data
       const mutationTree = buildTree(mutationInfoData);
+      console.log('Mutation tree structure:', mutationTree);
+
       const d3TreeData = convertToD3Format(mutationTree);
+      console.log('D3 tree data:', d3TreeData);
 
       // Convert the tree to D3 hierarchy format and draw it
       const root = d3.hierarchy(d3TreeData);
