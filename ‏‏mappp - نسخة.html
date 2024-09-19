@@ -113,17 +113,23 @@
             }
 
             function drawTree(treeData) {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                const margin = 50;
+                const nodeWidth = 100; // Width of each node
+                const nodeHeight = 60; // Height of each node
+
                 const svg = d3.select('#tree').append('svg')
                     .attr('width', '100%')
                     .attr('height', '100%')
                     .append('g');
 
                 const root = d3.hierarchy(treeData);
-                const treeLayout = d3.tree().size([window.innerHeight - 100, window.innerWidth - 100]);
+                const treeLayout = d3.tree().size([height - 2 * margin, width - 2 * margin]);
                 treeLayout(root);
 
-                const xOffset = (window.innerWidth - root.descendants().reduce((max, node) => Math.max(max, node.x), 0) - 100) / 2;
-                const yOffset = 50;
+                const xOffset = (width - root.descendants().reduce((max, node) => Math.max(max, node.x), 0) - margin) / 2;
+                const yOffset = margin;
 
                 svg.attr('transform', `translate(${xOffset}, ${yOffset})`);
 
@@ -149,10 +155,10 @@
                     });
 
                 node.append('rect')
-                    .attr('width', 80)
-                    .attr('height', 40)
-                    .attr('x', -40)
-                    .attr('y', -20);
+                    .attr('width', nodeWidth)
+                    .attr('height', nodeHeight)
+                    .attr('x', -nodeWidth / 2)
+                    .attr('y', -nodeHeight / 2);
 
                 node.append('text')
                     .attr('class', 'count')
