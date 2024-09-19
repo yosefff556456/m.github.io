@@ -59,7 +59,6 @@
 <body>
     <div id="tree"></div>
 
-    <!-- Load PapaParse -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
     <script>
@@ -115,9 +114,10 @@
             function drawTree(treeData) {
                 const width = window.innerWidth;
                 const height = window.innerHeight;
-                const svg = d3.select('#tree').append('svg')
-                    .attr('width', width)
-                    .attr('height', height);
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", width);
+                svg.setAttribute("height", height);
+                document.getElementById("tree").appendChild(svg);
 
                 function createTree(root, x, y, xOffset) {
                     const children = root.children;
@@ -127,44 +127,51 @@
                     const horizontalSpacing = 150;
 
                     // Draw node
-                    svg.append('rect')
-                        .attr('x', x - nodeWidth / 2)
-                        .attr('y', y - nodeHeight / 2)
-                        .attr('width', nodeWidth)
-                        .attr('height', nodeHeight)
-                        .attr('class', 'node')
-                        .attr('rx', 5)
-                        .attr('ry', 5);
+                    const nodeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                    nodeGroup.setAttribute("transform", `translate(${x}, ${y})`);
 
-                    svg.append('text')
-                        .attr('class', 'name')
-                        .attr('x', x)
-                        .attr('y', y - nodeHeight / 2 + 5)
-                        .text(root.name);
+                    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    rect.setAttribute("x", -nodeWidth / 2);
+                    rect.setAttribute("y", -nodeHeight / 2);
+                    rect.setAttribute("width", nodeWidth);
+                    rect.setAttribute("height", nodeHeight);
+                    rect.setAttribute("class", "node");
+                    nodeGroup.appendChild(rect);
 
-                    svg.append('text')
-                        .attr('class', 'count')
-                        .attr('x', x)
-                        .attr('y', y + nodeHeight / 2 - 5)
-                        .text(root.count || '');
+                    const nameText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    nameText.setAttribute("class", "name");
+                    nameText.setAttribute("x", 0);
+                    nameText.setAttribute("y", -nodeHeight / 2 + 5);
+                    nameText.textContent = root.name;
+                    nodeGroup.appendChild(nameText);
+
+                    const countText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    countText.setAttribute("class", "count");
+                    countText.setAttribute("x", 0);
+                    countText.setAttribute("y", nodeHeight / 2 - 5);
+                    countText.textContent = root.count || '';
+                    nodeGroup.appendChild(countText);
+
+                    svg.appendChild(nodeGroup);
 
                     // Draw links and child nodes
                     children.forEach((child, index) => {
                         const childX = x + (index - (children.length - 1) / 2) * horizontalSpacing;
                         const childY = y + verticalSpacing;
-                        
-                        svg.append('line')
-                            .attr('class', 'link')
-                            .attr('x1', x)
-                            .attr('y1', y + nodeHeight / 2)
-                            .attr('x2', childX)
-                            .attr('y2', childY - nodeHeight / 2);
+
+                        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                        line.setAttribute("class", "link");
+                        line.setAttribute("x1", 0);
+                        line.setAttribute("y1", nodeHeight / 2);
+                        line.setAttribute("x2", childX - x);
+                        line.setAttribute("y2", childY - y - nodeHeight / 2);
+                        svg.appendChild(line);
 
                         createTree(child, childX, childY, xOffset / 2);
                     });
                 }
 
-                createTree(d3.hierarchy(treeData), width / 2, 100, width / 2);
+                createTree(treeData, width / 2, 100, width / 2);
             }
         });
     </script>
