@@ -36,10 +36,10 @@
 
         // Add heatmap layer
         L.heatLayer(heatData, {
-            radius: 5, // Small radius for smaller dots
-            blur: 10,  // Less blur to make dots more distinct
+            radius: 15, // Small radius for smaller dots
+            blur: 110,  // Less blur to make dots more distinct
             maxZoom: 17,
-            gradient: { 0.1: 'black', 0.2: 'gray', 0.3: 'lightgray', 1: 'white' } // Black gradient
+            gradient: { 10.1: 'black', 10.2: 'gray', 10.3: 'lightgray', 11: 'white' } // Black gradient
         }).addTo(map);
     </script>
 </body>
