@@ -1,77 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Tree Visualization</title>
+    <title>Heat Map for Arabian Oryx Sightings</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Add your CSS styling here */
-        .tree {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .node {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin: 5px;
-            position: relative;
-        }
-        .node::before {
-            content: "";
-            position: absolute;
-            left: 50%;
-            top: -10px;
-            border-width: 10px;
-            border-style: solid;
-            border-color: transparent transparent #ccc transparent;
-        }
-        .node > .node {
-            margin-top: 20px;
+        #map {
+            height: 100vh;
+            width: 100%;
         }
     </style>
 </head>
 <body>
-    <div id="tree" class="tree"></div>
+    <div id="map"></div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
     <script>
-        async function fetchTreeData() {
-            try {
-                const response = await fetch('https://raw.githubusercontent.com/YFullTeam/YTree/master/current_tree.json');
-                if (!response.ok) throw new Error('Network response was not ok');
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
-        }
+        // Initialize the map
+        var map = L.map('map').setView([23.8859, 45.0792], 6); // Centered on Saudi Arabia
 
-        function createNode(name) {
-            const div = document.createElement('div');
-            div.classList.add('node');
-            div.textContent = name;
-            return div;
-        }
+        // Add a base layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
 
-        function buildBranch(node) {
-            if (!node) return;
-            const branch = createNode(node.name);
-            if (node.children && node.children.length) {
-                node.children.forEach(child => {
-                    const childBranch = buildBranch(child);
-                    if (childBranch) branch.appendChild(childBranch);
-                });
-            }
-            return branch;
-        }
+        // Data for the heatmap (latitude, longitude, intensity)
+        var heatData = [
+            // Example data, replace this with your own data points
+            [24.7136, 46.6753, 0.5], // [lat, lon, intensity]
+            [25.276987, 49.586051, 0.6],
+            // Add more data points here
+        ];
 
-        fetchTreeData().then(data => {
-            if (data) {
-                const tree = buildBranch(data);
-                if (tree) document.getElementById('tree').appendChild(tree);
-            }
-        });
+        // Add heatmap layer
+        L.heatLayer(heatData, {radius: 25, blur: 15, maxZoom: 17}).addTo(map);
     </script>
 </body>
 </html>
