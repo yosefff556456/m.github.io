@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apistobuthus pterygocercus Heat Map with Smooth Boundary</title>
+    <title>Apistobuthus pterygocercus Heat Map with Smooth Wide Boundary</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
@@ -17,7 +17,7 @@
 </head>
 <body>
 
-<h3>Apistobuthus pterygocercus Heat Map with Smooth Boundary</h3>
+<h3>Apistobuthus pterygocercus Heat Map with Smooth Wide Boundary</h3>
 <div id="map"></div>
 
 <script>
@@ -72,14 +72,16 @@ async function fetchObservations() {
             alert('No valid coordinates found.');
         }
 
-        // Generate smooth boundary using Turf.js convex hull
+        // Generate smooth buffer around the points using Turf.js
         const points = turf.featureCollection(heatData.map(coords => turf.point([coords[1], coords[0]])));
-        const convexHull = turf.convex(points);
 
-        if (convexHull) {
-            // Convert the convex hull polygon to a Leaflet-compatible format and draw it
-            const hullCoords = convexHull.geometry.coordinates[0].map(coord => [coord[1], coord[0]]); // Reverse to [lat, lng]
-            L.polygon(hullCoords, {
+        // Create a buffer around the points with a 50km radius (increase this value for a wider buffer)
+        const buffer = turf.buffer(points, 50, { units: 'kilometers' });
+
+        if (buffer) {
+            // Convert the buffer polygon to a Leaflet-compatible format and draw it
+            const bufferCoords = buffer.features[0].geometry.coordinates[0].map(coord => [coord[1], coord[0]]); // Reverse to [lat, lng]
+            L.polygon(bufferCoords, {
                 color: 'blue',
                 weight: 2,
                 opacity: 0.6,
