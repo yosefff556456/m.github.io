@@ -3,92 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gene Tree</title>
+    <title>Genetic Tree Visualization</title>
     <style>
-        /* Basic styling for the tree */
-        #tree {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            overflow: auto;
+        /* Add your CSS styling here */
+        .tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .node {
-            position: absolute;
-            padding: 5px;
-            border: 1px solid #000;
-            background-color: #fff;
+            padding: 10px;
+            border: 1px solid #ccc;
             border-radius: 5px;
-            text-align: center;
-            font-size: 12px;
-            cursor: pointer;
+            margin: 5px;
+            position: relative;
         }
-        .line {
+        .node::before {
+            content: "";
             position: absolute;
-            background-color: #000;
+            left: 50%;
+            top: -10px;
+            border-width: 10px;
+            border-style: solid;
+            border-color: transparent transparent #ccc transparent;
+        }
+        .node > .node {
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div id="tree"></div>
+    <div id="tree" class="tree"></div>
 
     <script>
-        async function fetchData() {
-            const response = await fetch('current_tree.json');
+        async function fetchTreeData() {
+            const response = await fetch('https://raw.githubusercontent.com/YFullTeam/YTree/master/current_tree.json');
             const data = await response.json();
             return data;
         }
 
-        function createNode(id, x, y, text) {
-            const node = document.createElement('div');
-            node.className = 'node';
-            node.id = id;
-            node.style.left = `${x}px`;
-            node.style.top = `${y}px`;
-            node.innerText = text;
-            return node;
+        function createNode(name) {
+            const div = document.createElement('div');
+            div.classList.add('node');
+            div.textContent = name;
+            return div;
         }
 
-        function drawLine(x1, y1, x2, y2) {
-            const line = document.createElement('div');
-            line.className = 'line';
-            line.style.left = `${Math.min(x1, x2)}px`;
-            line.style.top = `${Math.min(y1, y2)}px`;
-            line.style.width = `${Math.abs(x2 - x1)}px`;
-            line.style.height = `${Math.abs(y2 - y1)}px`;
-            line.style.transform = `rotate(${Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI}deg)`;
-            return line;
-        }
-
-        function renderTree(tree, container) {
-            const positions = {};
-            let xOffset = 0;
-
-            function renderNode(node, parentX, parentY) {
-                const x = xOffset;
-                const y = parentY + 100;
-
-                const nodeElement = createNode(node.id, x, y, node.id);
-                container.appendChild(nodeElement);
-                positions[node.id] = { x, y };
-
-                if (parentX !== undefined) {
-                    const line = drawLine(parentX + 25, parentY + 25, x + 25, y);
-                    container.appendChild(line);
+        function buildTree(data) {
+            const root = document.getElementById('tree');
+            
+            function buildBranch(node) {
+                const branch = createNode(node.name);
+                if (node.children && node.children.length) {
+                    node.children.forEach(child => {
+                        const childBranch = buildBranch(child);
+                        branch.appendChild(childBranch);
+                    });
                 }
-
-                xOffset += 150;
-
-                if (node.children) {
-                    node.children.forEach(child => renderNode(child, x, y));
-                }
+                return branch;
             }
 
-            renderNode(tree, undefined, 0);
+            const tree = buildBranch(data);
+            root.appendChild(tree);
         }
 
-        fetchData().then(data => {
-            const treeContainer = document.getElementById('tree');
-            renderTree(data, treeContainer);
+        fetchTreeData().then(data => {
+            buildTree(data);
         });
     </script>
 </body>
