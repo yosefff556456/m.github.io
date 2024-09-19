@@ -22,6 +22,7 @@
         }
         svg {
             font: 12px sans-serif;
+            overflow: visible; /* Allow overflow */
         }
         .node rect {
             fill: #3498db;
@@ -119,11 +120,13 @@
                 const svg = d3.select('#tree').append('svg')
                     .attr('width', width)
                     .attr('height', height)
+                    .attr('viewBox', `0 0 ${width} ${height}`)
+                    .attr('preserveAspectRatio', 'xMidYMid meet')
                     .append('g')
-                    .attr('transform', 'translate(50, 50)');
+                    .attr('transform', 'translate(0, 0)'); // Initial translation
 
                 const root = d3.hierarchy(treeData);
-                const treeLayout = d3.tree().size([height - 100, width - 100]);
+                const treeLayout = d3.tree().size([height, width]);
                 treeLayout(root);
 
                 svg.selectAll('line.link')
