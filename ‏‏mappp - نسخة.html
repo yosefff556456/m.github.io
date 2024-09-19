@@ -3,207 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaflet Map with JSON Data</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <title>Genetic Mutations Tree</title>
     <style>
-        body {
+        body, html {
             margin: 0;
+            padding: 0;
             font-family: Arial, sans-serif;
             background-color: #f5f5f5;
         }
-        #map {
-            height: 100vh; /* Full height viewport */
+        #tree {
             width: 100%;
-        }
-        .popup-content {
-            max-width: 350px; /* Increased width for better readability */
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .popup-content ul {
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-        }
-        .popup-content ul li {
-            margin: 5px 0;
-        }
-        .popup-content ul li a {
-            display: block;
-            padding: 8px;
-            text-decoration: none;
-            color: #007bff;
-            border-radius: 4px;
-            background-color: #e9ecef;
-        }
-        .popup-content ul li a:hover {
-            background-color: #007bff;
-            color: #fff;
-        }
-        .popup-content .details {
-            margin-top: 10px;
-            border-top: 1px solid #dee2e6;
-            padding-top: 10px;
-        }
-        .navigation-buttons {
-            margin-top: 10px;
+            height: 100vh;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
+            align-items: center;
+            background-color: #ffffff;
+            overflow: hidden;
         }
-        .navigation-buttons button {
-            padding: 5px 10px;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            border-radius: 4px;
+        svg {
+            font: 12px sans-serif;
+        }
+        .node rect {
+            fill: #3498db;
+            stroke: #2c3e50;
+            stroke-width: 2px;
+            transition: fill 0.3s ease;
+        }
+        .node rect:hover {
+            fill: #2ecc71;
+        }
+        .node text.count {
+            font-size: 12px;
+            fill: #ffffff;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+        .node text.name {
+            font-size: 10px;
+            fill: #000000;
+            text-anchor: middle;
+            dominant-baseline: hanging;
+        }
+        .link {
+            stroke: #95a5a6;
+            stroke-width: 2px;
+        }
+        .node:hover text.count {
+            fill: #e74c3c;
+        }
+        .node {
             cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .navigation-buttons button:disabled {
-            background-color: #e9ecef;
-            color: #6c757d;
-            cursor: not-allowed;
-        }
-        .navigation-buttons button:hover:not(:disabled) {
-            background-color: #0056b3;
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
+    <div id="tree"></div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <!-- Load PapaParse -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+
     <script>
-        // Initialize the map and set its view
-        const map = L.map('map').setView([59.3828, 27.3639], 10);
+        document.addEventListener("DOMContentLoaded", function() {
+            Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vRnDqmeMrSFgOBL5MHbulxNw7F9PO4PZBFXtBqEyPmiljTZWQCTwakxKiRneckhvknl-jpvOeR7PuJT/pub?output=csv', {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    const data = results.data;
+                    const treeData = buildTreeData(data);
+                    drawTree(treeData);
+                },
+                error: function(error) {
+                    console.error('Error loading CSV data:', error);
+                }
+            });
 
-        // Add tile layer to the map
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+            function buildTreeData(data) {
+                let tree = { name: 'j', children: [], count: 0 };
+                let nodes = { 'j': tree };
+                let mutationCounts = {};
 
-        // Function to generate popup content
-        function generatePopupContent(items) {
-            if (items.length === 1) {
-                const item = items[0];
-                return `
-                    <div class="popup-content">
-                        <div><b>ID:</b> ${item.id}</div>
-                        <div><b>Group:</b> ${item.group}</div>
-                        <div><b>Country:</b> ${item.country}</div>
-                        <div><b>Date:</b> ${item.date}</div>
-                        <div><b>Sex:</b> ${item.sex}</div>
-                        <div><b>ISOGG:</b> ${item.isogg}</div>
-                        <div><b>YFull:</b> ${item.yfull}</div>
-                        <div><b>Mito:</b> ${item.mito}</div>
-                        <div><b>Skin:</b> ${item.skin || 'N/A'}</div>
-                        <div><b>Hair:</b> ${item.hair || 'N/A'}</div>
-                        <div><b>Eyes:</b> ${item.eyes || 'N/A'}</div>
-                    </div>
-                `;
-            } else {
-                return `
-                    <div class="popup-content">
-                        <ul>${items.map((item, index) => 
-                            `<li><a href="#" class="item-link" data-index="${index}">Item ${index + 1}</a></li>`
-                        ).join('')}</ul>
-                        <div class="details" id="item-details"></div>
-                        <div class="navigation-buttons">
-                            <button id="prev-btn" disabled>&lt; Previous</button>
-                            <button id="next-btn">Next &gt;</button>
-                        </div>
-                    </div>
-                `;
-            }
-        }
+                data.forEach(row => {
+                    if (!row['mutationInfo']) return;
+                    const mutations = row['mutationInfo'].split('>').filter(Boolean);
+                    let currentNode = nodes['j'];
 
-        // Function to update details
-        function updateDetails(index, items) {
-            const item = items[index];
-            const detailsDiv = document.getElementById('item-details');
-            detailsDiv.innerHTML = `
-                <div><b>ID:</b> ${item.id}</div>
-                <div><b>Group:</b> ${item.group}</div>
-                <div><b>Country:</b> ${item.country}</div>
-                <div><b>Date:</b> ${item.date}</div>
-                <div><b>Sex:</b> ${item.sex}</div>
-                <div><b>ISOGG:</b> ${item.isogg}</div>
-                <div><b>YFull:</b> ${item.yfull}</div>
-                <div><b>Mito:</b> ${item.mito}</div>
-                <div><b>Skin:</b> ${item.skin || 'N/A'}</div>
-                <div><b>Hair:</b> ${item.hair || 'N/A'}</div>
-                <div><b>Eyes:</b> ${item.eyes || 'N/A'}</div>
-            `;
-        }
-
-        // Load JSON data from external file
-        fetch('annotation.json') // Replace with the actual path to your JSON file
-            .then(response => response.json())
-            .then(data => {
-                // Group data by coordinates
-                const groupedData = data.reduce((acc, item) => {
-                    const key = `${item.lat},${item.long}`;
-                    if (!acc[key]) {
-                        acc[key] = [];
-                    }
-                    acc[key].push(item);
-                    return acc;
-                }, {});
-
-                // Add markers to the map
-                Object.entries(groupedData).forEach(([key, items]) => {
-                    const [lat, long] = key.split(',').map(Number);
-
-                    // Create and bind the marker with popup
-                    const marker = L.marker([lat, long]).addTo(map);
-                    marker.bindPopup(generatePopupContent(items));
-
-                    marker.on('popupopen', () => {
-                        const container = document.querySelector('.popup-content');
-                        if (container) {
-                            const prevBtn = container.querySelector('#prev-btn');
-                            const nextBtn = container.querySelector('#next-btn');
-                            const itemLinks = container.querySelectorAll('.item-link');
-
-                            let currentIndex = 0;
-
-                            function updateNavigation() {
-                                prevBtn.disabled = (currentIndex === 0);
-                                nextBtn.disabled = (currentIndex === items.length - 1);
+                    mutations.forEach((mutation, index) => {
+                        if (!nodes[mutation]) {
+                            nodes[mutation] = { name: mutation, children: [], samples: [], count: 0 };
+                            currentNode.children.push(nodes[mutation]);
+                        }
+                        currentNode = nodes[mutation];
+                        if (index === mutations.length - 1) {
+                            if (!mutationCounts[mutation]) {
+                                mutationCounts[mutation] = 0;
                             }
-
-                            itemLinks.forEach(link => {
-                                link.addEventListener('click', function(event) {
-                                    event.preventDefault();
-                                    currentIndex = parseInt(this.getAttribute('data-index'));
-                                    updateDetails(currentIndex, items);
-                                    updateNavigation();
-                                });
-                            });
-
-                            prevBtn.addEventListener('click', () => {
-                                if (currentIndex > 0) {
-                                    currentIndex--;
-                                    updateDetails(currentIndex, items);
-                                    updateNavigation();
-                                }
-                            });
-
-                            nextBtn.addEventListener('click', () => {
-                                if (currentIndex < items.length - 1) {
-                                    currentIndex++;
-                                    updateDetails(currentIndex, items);
-                                    updateNavigation();
-                                }
-                            });
-
-                            updateDetails(currentIndex, items); // Initial details
-                            updateNavigation(); // Initial navigation button state
+                            mutationCounts[mutation]++;
                         }
                     });
+                    currentNode.samples.push({ name: row['personInfo'], location: row['locationInfo'] });
                 });
-            })
-            .catch(error => console.error('Error loading the JSON file:', error));
+
+                Object.keys(nodes).forEach(key => {
+                    if (mutationCounts[key]) {
+                        nodes[key].count = mutationCounts[key];
+                    }
+                });
+
+                return tree;
+            }
+
+            function drawTree(treeData) {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                const svg = d3.select('#tree').append('svg')
+                    .attr('width', width)
+                    .attr('height', height);
+
+                function createTree(root, x, y, xOffset) {
+                    const children = root.children;
+                    const nodeWidth = 60;
+                    const nodeHeight = 30;
+                    const verticalSpacing = 100;
+                    const horizontalSpacing = 150;
+
+                    // Draw node
+                    svg.append('rect')
+                        .attr('x', x - nodeWidth / 2)
+                        .attr('y', y - nodeHeight / 2)
+                        .attr('width', nodeWidth)
+                        .attr('height', nodeHeight)
+                        .attr('class', 'node')
+                        .attr('rx', 5)
+                        .attr('ry', 5);
+
+                    svg.append('text')
+                        .attr('class', 'name')
+                        .attr('x', x)
+                        .attr('y', y - nodeHeight / 2 + 5)
+                        .text(root.name);
+
+                    svg.append('text')
+                        .attr('class', 'count')
+                        .attr('x', x)
+                        .attr('y', y + nodeHeight / 2 - 5)
+                        .text(root.count || '');
+
+                    // Draw links and child nodes
+                    children.forEach((child, index) => {
+                        const childX = x + (index - (children.length - 1) / 2) * horizontalSpacing;
+                        const childY = y + verticalSpacing;
+                        
+                        svg.append('line')
+                            .attr('class', 'link')
+                            .attr('x1', x)
+                            .attr('y1', y + nodeHeight / 2)
+                            .attr('x2', childX)
+                            .attr('y2', childY - nodeHeight / 2);
+
+                        createTree(child, childX, childY, xOffset / 2);
+                    });
+                }
+
+                createTree(d3.hierarchy(treeData), width / 2, 100, width / 2);
+            }
+        });
     </script>
 </body>
 </html>
