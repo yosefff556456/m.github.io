@@ -14,6 +14,7 @@
 
     .node text {
       font: 12px sans-serif;
+      pointer-events: none; /* Prevents text from interfering with interactions */
     }
 
     .link {
@@ -38,7 +39,7 @@
 
     const treeLayout = d3.cluster().size([height, width - 160]);
 
-    // دالة لتحليل عمود :mutationInfo وبناء شجرة بدون تكرار
+    // Function to build the tree structure from mutation list
     function buildTree(mutationList) {
       const root = {};
 
@@ -48,36 +49,36 @@
 
         mutations.forEach(mutation => {
           if (!currentNode[mutation]) {
-            currentNode[mutation] = {};  // إضافة عقدة جديدة إذا لم تكن موجودة
+            currentNode[mutation] = {};  // Add new node if it doesn't exist
           }
-          currentNode = currentNode[mutation];  // التقدم للعقدة التالية
+          currentNode = currentNode[mutation];  // Move to the next node
         });
       });
 
       return root;
     }
 
-    // دالة لتحويل الشجرة إلى صيغة D3.js
+    // Function to convert the tree to D3.js format
     function convertToD3Format(node, name = "root") {
       const children = Object.keys(node).map(key => convertToD3Format(node[key], key));
       return { name, children };
     }
 
-    // تحميل بيانات CSV من الرابط
+    // Load CSV data from the URL
     d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vRnDqmeMrSFgOBL5MHbulxNw7F9PO4PZBFXtBqEyPmiljTZWQCTwakxKiRneckhvknl-jpvOeR7PuJT/pub?output=csv").then(function(data) {
       
-      // استخراج عمود :mutationInfo
-      const mutationInfoData = data.map(d => d[":mutationInfo"]);
+      // Extract the mutationInfo column
+      const mutationInfoData = data.map(d => d[':mutationInfo']);
 
-      // بناء الشجرة من البيانات
+      // Build the tree from the data
       const mutationTree = buildTree(mutationInfoData);
       const d3TreeData = convertToD3Format(mutationTree);
 
-      // تحويل الشجرة إلى صيغة D3.js وعرضها
+      // Convert the tree to D3 hierarchy format and draw it
       const root = d3.hierarchy(d3TreeData);
       treeLayout(root);
 
-      // رسم الروابط
+      // Draw links
       svg.selectAll(".link")
         .data(root.links())
         .enter()
@@ -87,7 +88,7 @@
           .x(d => d.y)
           .y(d => d.x));
 
-      // رسم العقد
+      // Draw nodes
       const node = svg.selectAll(".node")
         .data(root.descendants())
         .enter()
