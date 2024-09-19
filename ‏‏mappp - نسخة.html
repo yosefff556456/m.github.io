@@ -118,9 +118,9 @@
 
                 function createTree(root, x, y, xOffset, level = 0) {
                     const children = root.children;
-                    const nodeWidth = 80;
-                    const nodeHeight = 40;
-                    const verticalSpacing = 100;
+                    const nodeWidth = 100;
+                    const nodeHeight = 50;
+                    const verticalSpacing = 150;
                     const horizontalSpacing = 200;
 
                     // Draw node
@@ -145,7 +145,7 @@
                     const countText = document.createElementNS("http://www.w3.org/2000/svg", "text");
                     countText.setAttribute("class", "count");
                     countText.setAttribute("x", 0);
-                    countText.setAttribute("y", nodeHeight / 2 - 5);
+                    countText.setAttribute("y", nodeHeight / 2 - 10);
                     countText.textContent = root.count || '';
                     nodeGroup.appendChild(countText);
 
