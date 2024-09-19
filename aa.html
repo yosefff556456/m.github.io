@@ -18,7 +18,7 @@
             justify-content: center;
             align-items: center;
             background-color: #ffffff;
-            overflow: hidden; /* Hide overflow to prevent scrollbars */
+            overflow: hidden;
         }
         svg {
             font: 12px sans-serif;
@@ -117,8 +117,9 @@
                 const width = window.innerWidth;
                 const height = window.innerHeight;
                 const svg = d3.select('#tree').append('svg')
-                    .attr('width', width)
-                    .attr('height', height)
+                    .attr('width', '100%')
+                    .attr('height', '100%')
+                    .attr('viewBox', `0 0 ${width} ${height}`)
                     .append('g')
                     .attr('transform', 'translate(100, 100)');
 
@@ -178,11 +179,10 @@
 
                 d3.select("svg").call(zoom);
 
-                // Handle window resizing
                 window.addEventListener('resize', () => {
                     const newWidth = window.innerWidth;
                     const newHeight = window.innerHeight;
-                    svg.attr('width', newWidth).attr('height', newHeight);
+                    svg.attr('viewBox', `0 0 ${newWidth} ${newHeight}`);
                     treeLayout.size([newWidth - 200, newHeight - 200]);
                     treeLayout(root);
                     svg.selectAll('line.link')
