@@ -1,107 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apistobuthus pterygocercus Heat Map with Smooth Range</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
-    <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
-    <style>
-        #map {
-            height: 600px;
-            width: 100%;
-        }
-    </style>
+  <title>Saudi Arabian Plant Map</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
+  <div id="map" style="height: 600px;"></div>
 
-<h3>Apistobuthus pterygocercus Heat Map with Smooth Range</h3>
-<div id="map"></div>
+  <script>
+    // Initialize the map
+    var map = L.map('map').setView([23.8859, 45.0792], 6); // Saudi Arabia center
 
-<script>
-// Initialize the map with a center (modify this based on the species' range)
-var map = L.map('map').setView([25.0, 55.0], 5);
+    // Add a tile layer (optional, for visual context)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-// Add OpenStreetMap tile layer
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-}).addTo(map);
+    // Add SVG layer
+    L.svg().addTo(map);
 
-// Function to fetch iNaturalist data for Apistobuthus pterygocercus
-async function fetchObservations() {
-    try {
-        // Fetch observations from iNaturalist API
-        const response = await fetch('https://api.inaturalist.org/v1/observations?taxon_name=Apistobuthus%20pterygocercus&geo=true&per_page=200');
-        const data = await response.json();
+    // Load Saudi Arabia regions GeoJSON data
+    fetch('path/to/saudi_arabia_regions.geojson') // Replace with actual path
+      .then(response => response.json())
+      .then(geojsonData => {
+        L.geoJson(geojsonData, {
+          style: function (feature) {
+            return { color: "#3388ff", weight: 2 };
+          }
+        }).addTo(map);
+      });
 
-        if (data.results.length === 0) {
-            console.error('No observations found for this species.');
-            alert('No observations found for Apistobuthus pterygocercus.');
-            return;
-        }
+    // iNaturalist API function to get plant observations in Saudi Arabia
+    function getPlantObservations(plantName) {
+      const apiUrl = `https://api.inaturalist.org/v1/observations?taxon_name=${plantName}&place_id=116&per_page=100`; // Place ID 116 is Saudi Arabia
 
-        // Extract coordinates from the API response
-        const heatData = data.results
-            .filter(obs => obs.geojson && obs.geojson.coordinates)
-            .map(obs => [obs.geojson.coordinates[1], obs.geojson.coordinates[0]]); // Lat, Lng
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          data.results.forEach(observation => {
+            const lat = observation.geojson.coordinates[1];
+            const lng = observation.geojson.coordinates[0];
+            const speciesName = observation.taxon.preferred_common_name || observation.taxon.name;
+            const imageUrl = observation.photos[0]?.url || '';
 
-        // Add smaller black circle markers for each observation point
-        heatData.forEach(coords => {
-            L.circleMarker(coords, {
-                radius: 1,  // Very small black circles
-                fillColor: '#000000',  // Black fill
-                color: '#000000',  // Black border
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 1
-            }).addTo(map);
+            // Add marker to the map
+            const marker = L.marker([lat, lng]).addTo(map);
+            marker.bindPopup(`<b>${speciesName}</b><br><img src="${imageUrl}" width="100" height="100"/>`);
+          });
         });
-
-        // Add heat map layer with a wider range
-        if (heatData.length > 0) {
-            L.heatLayer(heatData, {
-                radius: 100,   // Wider heatmap radius
-                blur: 70,      // Increased blur for smoother spread
-                maxZoom: 10,   // Adjust max zoom level for heat visibility
-                max: 0.7       // Heat intensity reduced for smoother appearance
-            }).addTo(map);
-        } else {
-            console.error('No valid coordinates found for the observations.');
-            alert('No valid coordinates found.');
-        }
-
-        // Generate a buffer (smooth boundary) using Turf.js around all points
-        const points = turf.featureCollection(heatData.map(coords => turf.point([coords[1], coords[0]])));
-        
-        // Create a buffer around all the points (adjust distance as needed)
-        const buffered = turf.buffer(points, 50, { units: 'kilometers' }); // Buffer of 50km around the points
-
-        if (buffered) {
-            // Convert the buffer polygon to a Leaflet-compatible format and draw it
-            const bufferCoords = buffered.features[0].geometry.coordinates[0].map(coord => [coord[1], coord[0]]); // Reverse to [lat, lng]
-
-            // Draw smooth boundary (polygon) around the buffer
-            L.polygon(bufferCoords, {
-                color: 'red',
-                weight: 2,
-                opacity: 0.8,
-                fillColor: 'red',
-                fillOpacity: 0.1
-            }).addTo(map);
-        }
-
-    } catch (error) {
-        console.error('Error fetching or processing data:', error);
-        alert('An error occurred while fetching observation data.');
     }
-}
 
-// Fetch data and create the heat map
-fetchObservations();
+    // Get observations for selected plants
+    const selectedPlants = ['Acacia tortilis', 'Rhazya stricta', 'Salvadora persica']; 
+    selectedPlants.forEach(plant => getPlantObservations(plant));
 
-</script>
-
+  </script>
 </body>
 </html>
