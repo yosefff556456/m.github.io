@@ -125,7 +125,7 @@
                 const root = d3.hierarchy(treeData);
                 const treeLayout = d3.tree()
                     .size([width - 200, height - 200])
-                    .separation((a, b) => a.parent === b.parent ? 1 : 2); // Adjust separation
+                    .separation((a, b) => a.parent === b.parent ? 1 : 2);
 
                 treeLayout(root);
 
@@ -177,6 +177,21 @@
                     });
 
                 d3.select("svg").call(zoom);
+
+                // Handle window resizing
+                window.addEventListener('resize', () => {
+                    const newWidth = window.innerWidth;
+                    const newHeight = window.innerHeight;
+                    svg.attr('width', newWidth).attr('height', newHeight);
+                    treeLayout.size([newWidth - 200, newHeight - 200]);
+                    treeLayout(root);
+                    svg.selectAll('line.link')
+                        .attr('x1', d => d.x)
+                        .attr('y1', d => d.y)
+                        .attr('x2', d => d.parent.x)
+                        .attr('y2', d => d.parent.y);
+                    svg.selectAll('g.node').attr('transform', d => `translate(${d.x},${d.y})`);
+                });
             }
         });
     </script>
