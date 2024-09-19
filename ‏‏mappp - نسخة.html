@@ -116,8 +116,8 @@
                 const width = window.innerWidth;
                 const height = window.innerHeight;
                 const margin = 50;
-                const nodeWidth = 100; // Width of each node
-                const nodeHeight = 60; // Height of each node
+                const nodeWidth = 120; // Increase node width for better spacing
+                const nodeHeight = 60;
 
                 const svg = d3.select('#tree').append('svg')
                     .attr('width', '100%')
@@ -128,10 +128,9 @@
                 const treeLayout = d3.tree().size([height - 2 * margin, width - 2 * margin]);
                 treeLayout(root);
 
-                const xOffset = (width - root.descendants().reduce((max, node) => Math.max(max, node.x), 0) - margin) / 2;
-                const yOffset = margin;
-
-                svg.attr('transform', `translate(${xOffset}, ${yOffset})`);
+                const maxWidth = d3.max(root.descendants(), d => d.x);
+                const svgWidth = Math.max(width, maxWidth + margin * 2);
+                svg.attr('transform', `translate(${margin}, ${margin})`);
 
                 svg.selectAll('line.link')
                     .data(root.descendants().slice(1))
