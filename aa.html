@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apistobuthus pterygocercus Heat Map with Smooth Wide Boundary</title>
+    <title>Apistobuthus pterygocercus Heat Map with Smooth Range</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
@@ -17,7 +17,7 @@
 </head>
 <body>
 
-<h3>Apistobuthus pterygocercus Heat Map with Smooth Wide Boundary</h3>
+<h3>Apistobuthus pterygocercus Heat Map with Smooth Range</h3>
 <div id="map"></div>
 
 <script>
@@ -59,34 +59,36 @@ async function fetchObservations() {
             }).addTo(map);
         });
 
-        // Add heat map layer with even wider range
+        // Add heat map layer with a wider range
         if (heatData.length > 0) {
             L.heatLayer(heatData, {
-                radius: 100,   // Much wider heatmap radius
-                blur: 70,      // Increased blur for an even wider spread
+                radius: 100,   // Wider heatmap radius
+                blur: 70,      // Increased blur for smoother spread
                 maxZoom: 10,   // Adjust max zoom level for heat visibility
-                max: 0.7       // Heat intensity reduced to match wider range
+                max: 0.7       // Heat intensity reduced for smoother appearance
             }).addTo(map);
         } else {
             console.error('No valid coordinates found for the observations.');
             alert('No valid coordinates found.');
         }
 
-        // Generate smooth buffer around the points using Turf.js
+        // Generate a buffer (smooth boundary) using Turf.js around all points
         const points = turf.featureCollection(heatData.map(coords => turf.point([coords[1], coords[0]])));
+        
+        // Create a buffer around all the points (adjust distance as needed)
+        const buffered = turf.buffer(points, 50, { units: 'kilometers' }); // Buffer of 50km around the points
 
-        // Create a buffer around the points with a 50km radius (increase this value for a wider buffer)
-        const buffer = turf.buffer(points, 50, { units: 'kilometers' });
-
-        if (buffer) {
+        if (buffered) {
             // Convert the buffer polygon to a Leaflet-compatible format and draw it
-            const bufferCoords = buffer.features[0].geometry.coordinates[0].map(coord => [coord[1], coord[0]]); // Reverse to [lat, lng]
+            const bufferCoords = buffered.features[0].geometry.coordinates[0].map(coord => [coord[1], coord[0]]); // Reverse to [lat, lng]
+
+            // Draw smooth boundary (polygon) around the buffer
             L.polygon(bufferCoords, {
-                color: 'blue',
+                color: 'red',
                 weight: 2,
-                opacity: 0.6,
-                fillColor: 'blue',
-                fillOpacity: 0.2
+                opacity: 0.8,
+                fillColor: 'red',
+                fillOpacity: 0.1
             }).addTo(map);
         }
 
