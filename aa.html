@@ -12,6 +12,15 @@
             height: 600px;
             width: 100%;
         }
+
+        /* CSS for black circles at observation points */
+        .black-circle {
+            width: 6px;
+            height: 6px;
+            background-color: black;
+            border-radius: 50%;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -20,8 +29,8 @@
 <div id="map"></div>
 
 <script>
-// Initialize the map
-var map = L.map('map').setView([25.0, 55.0], 5); // Adjust center for the known range of the species
+// Initialize the map with a center (modify this based on the species' range)
+var map = L.map('map').setView([25.0, 55.0], 5);
 
 // Add OpenStreetMap tile layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -46,13 +55,25 @@ async function fetchObservations() {
             .filter(obs => obs.geojson && obs.geojson.coordinates)
             .map(obs => [obs.geojson.coordinates[1], obs.geojson.coordinates[0]]); // Lat, Lng
 
-        // Check if there are valid coordinates
+        // Add black circle markers for each observation point
+        heatData.forEach(coords => {
+            L.circleMarker(coords, {
+                radius: 4, // Small size for the black circle
+                fillColor: '#000000', // Black fill
+                color: '#000000', // Black border
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 1
+            }).addTo(map);
+        });
+
+        // Add heat map layer with stronger settings
         if (heatData.length > 0) {
-            // Add heat map layer
             L.heatLayer(heatData, {
-                radius: 20, // Adjust heatmap radius
-                blur: 15,
-                maxZoom: 12
+                radius: 35,  // Increase heatmap radius
+                blur: 25,    // Increase blur for stronger heat effect
+                maxZoom: 12, // Adjust max zoom where heat is visible
+                max: 1.0     // Heat intensity
             }).addTo(map);
         } else {
             console.error('No valid coordinates found for the observations.');
