@@ -24,16 +24,23 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        // Data for the heatmap (latitude, longitude, intensity)
+        // Sample heat data (replace with your actual data points)
         var heatData = [
-            // Example data, replace this with your own data points
-            [24.7136, 46.6753, 0.5], // [lat, lon, intensity]
-            [25.276987, 49.586051, 0.6],
+            [24.7136, 46.6753, 0.2], [25.276987, 49.586051, 0.2], [23.8103, 45.4186, 0.2], 
+            [22.7494, 43.5384, 0.2], [26.4207, 50.0835, 0.2], [20.5857, 45.8596, 0.2],
             // Add more data points here
+            [24.7136, 46.6753, 0.2], [25.276987, 49.586051, 0.2], [23.8103, 45.4186, 0.2], 
+            [22.7494, 43.5384, 0.2], [26.4207, 50.0835, 0.2], [20.5857, 45.8596, 0.2],
+            // Repeat points or add more diverse points as needed
         ];
 
         // Add heatmap layer
-        L.heatLayer(heatData, {radius: 25, blur: 15, maxZoom: 17}).addTo(map);
+        L.heatLayer(heatData, {
+            radius: 5, // Small radius for smaller dots
+            blur: 10,  // Less blur to make dots more distinct
+            maxZoom: 17,
+            gradient: { 0.1: 'black', 0.2: 'gray', 0.3: 'lightgray', 1: 'white' } // Black gradient
+        }).addTo(map);
     </script>
 </body>
 </html>
