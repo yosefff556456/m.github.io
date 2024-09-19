@@ -49,7 +49,7 @@ async function fetchObservations() {
         // Add smaller black circle markers for each observation point
         heatData.forEach(coords => {
             L.circleMarker(coords, {
-                radius: 1,  // Smaller size for the black circles
+                radius: 1,  // Very small black circles
                 fillColor: '#000000',  // Black fill
                 color: '#000000',  // Black border
                 weight: 1,
@@ -58,13 +58,13 @@ async function fetchObservations() {
             }).addTo(map);
         });
 
-        // Add heat map layer with wider range
+        // Add heat map layer with even wider range
         if (heatData.length > 0) {
             L.heatLayer(heatData, {
-                radius: 70,   // Widened heatmap radius for broader range
-                blur: 50,     // Increased blur for a smoother, wider heat spread
-                maxZoom: 12,  // Adjust max zoom level for heat visibility
-                max: 0.8      // Heat intensity slightly reduced to match wider range
+                radius: 100,   // Much wider heatmap radius
+                blur: 70,      // Increased blur for an even wider spread
+                maxZoom: 10,   // Adjust max zoom level for heat visibility
+                max: 0.7       // Heat intensity reduced to match wider range
             }).addTo(map);
         } else {
             console.error('No valid coordinates found for the observations.');
