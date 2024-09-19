@@ -5,53 +5,62 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 600px; }
+  </style>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-  <div id="map" style="height: 600px;"></div>
+  <div id="map"></div>
 
   <script>
     // Initialize the map
-    var map = L.map('map').setView([23.8859, 45.0792], 6); // Saudi Arabia center
+    var map = L.map('map').setView([23.8859, 45.0792], 6); // Centered on Saudi Arabia
 
-    // Add a tile layer (optional, for visual context)
+    // Add a tile layer (for background context)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    // Add SVG layer
-    L.svg().addTo(map);
+    // Function to add GeoJSON data for Saudi Arabian regions
+    function addGeoJSON() {
+      fetch('path/to/saudi_arabia_regions.geojson') // Replace with actual path
+        .then(response => response.json())
+        .then(data => {
+          L.geoJson(data, {
+            style: function (feature) {
+              return { color: "#3388ff", weight: 2 };
+            }
+          }).addTo(map);
+        })
+        .catch(error => console.error('Error loading GeoJSON:', error));
+    }
 
-    // Load Saudi Arabia regions GeoJSON data
-    fetch('path/to/saudi_arabia_regions.geojson') // Replace with actual path
-      .then(response => response.json())
-      .then(geojsonData => {
-        L.geoJson(geojsonData, {
-          style: function (feature) {
-            return { color: "#3388ff", weight: 2 };
-          }
-        }).addTo(map);
-      });
-
-    // iNaturalist API function to get plant observations in Saudi Arabia
+    // Function to get plant observations from iNaturalist
     function getPlantObservations(plantName) {
-      const apiUrl = `https://api.inaturalist.org/v1/observations?taxon_name=${plantName}&place_id=116&per_page=100`; // Place ID 116 is Saudi Arabia
+      const apiUrl = `https://api.inaturalist.org/v1/observations?taxon_name=${plantName}&place_id=116&per_page=100`;
 
       fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
           data.results.forEach(observation => {
-            const lat = observation.geojson.coordinates[1];
-            const lng = observation.geojson.coordinates[0];
-            const speciesName = observation.taxon.preferred_common_name || observation.taxon.name;
-            const imageUrl = observation.photos[0]?.url || '';
+            if (observation.geojson && observation.geojson.coordinates) {
+              const lat = observation.geojson.coordinates[1];
+              const lng = observation.geojson.coordinates[0];
+              const speciesName = observation.taxon.preferred_common_name || observation.taxon.name;
+              const imageUrl = observation.photos[0]?.url || '';
 
-            // Add marker to the map
-            const marker = L.marker([lat, lng]).addTo(map);
-            marker.bindPopup(`<b>${speciesName}</b><br><img src="${imageUrl}" width="100" height="100"/>`);
+              // Add marker to the map
+              const marker = L.marker([lat, lng]).addTo(map);
+              marker.bindPopup(`<b>${speciesName}</b><br><img src="${imageUrl}" width="100" height="100"/>`);
+            }
           });
-        });
+        })
+        .catch(error => console.error('Error fetching plant observations:', error));
     }
+
+    // Add GeoJSON to the map
+    addGeoJSON();
 
     // Get observations for selected plants
     const selectedPlants = ['Acacia tortilis', 'Rhazya stricta', 'Salvadora persica']; 
