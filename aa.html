@@ -1,17 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Apistobuthus pterygocercus Heat Map</title>
-    <meta charset="utf-8" />
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Include Leaflet CSS & JS -->
+    <title>Apistobuthus pterygocercus Heat Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-    <!-- Include Leaflet.heat plugin -->
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
-
     <style>
         #map {
             height: 600px;
@@ -22,32 +17,51 @@
 <body>
 
 <h3>Apistobuthus pterygocercus Observations Heat Map</h3>
-
 <div id="map"></div>
 
 <script>
 // Initialize the map
-var map = L.map('map').setView([25.0, 55.0], 5); // Initial center and zoom level (adjust as needed)
+var map = L.map('map').setView([25.0, 55.0], 5); // Adjust center for the known range of the species
 
-// Add a tile layer to the map (OpenStreetMap)
+// Add OpenStreetMap tile layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// Function to fetch iNaturalist data
+// Function to fetch iNaturalist data for Apistobuthus pterygocercus
 async function fetchObservations() {
-    const response = await fetch('https://api.inaturalist.org/v1/observations?taxon_name=Apistobuthus%20pterygocercus');
-    const data = await response.json();
-    
-    // Extract coordinates from the API response
-    const heatData = data.results.map(obs => [obs.geojson.coordinates[1], obs.geojson.coordinates[0]]);
-    
-    // Add heatmap layer
-    L.heatLayer(heatData, {
-        radius: 25, // Adjust radius as needed
-        blur: 15,
-        maxZoom: 12
-    }).addTo(map);
+    try {
+        // Fetch observations from iNaturalist API
+        const response = await fetch('https://api.inaturalist.org/v1/observations?taxon_name=Apistobuthus%20pterygocercus&geo=true&per_page=200');
+        const data = await response.json();
+
+        if (data.results.length === 0) {
+            console.error('No observations found for this species.');
+            alert('No observations found for Apistobuthus pterygocercus.');
+            return;
+        }
+
+        // Extract coordinates from the API response
+        const heatData = data.results
+            .filter(obs => obs.geojson && obs.geojson.coordinates)
+            .map(obs => [obs.geojson.coordinates[1], obs.geojson.coordinates[0]]); // Lat, Lng
+
+        // Check if there are valid coordinates
+        if (heatData.length > 0) {
+            // Add heat map layer
+            L.heatLayer(heatData, {
+                radius: 20, // Adjust heatmap radius
+                blur: 15,
+                maxZoom: 12
+            }).addTo(map);
+        } else {
+            console.error('No valid coordinates found for the observations.');
+            alert('No valid coordinates found.');
+        }
+    } catch (error) {
+        console.error('Error fetching or processing data:', error);
+        alert('An error occurred while fetching observation data.');
+    }
 }
 
 // Fetch data and create the heat map
