@@ -10,15 +10,15 @@
             padding: 0;
             font-family: Arial, sans-serif;
             background-color: #f5f5f5;
+            overflow: hidden; /* Prevent scrollbars */
         }
         #tree {
-            width: 100%;
+            width: 100vw;
             height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             background-color: #ffffff;
-            overflow: hidden;
         }
         svg {
             font: 12px sans-serif;
@@ -115,22 +115,16 @@
             function drawTree(treeData) {
                 const width = window.innerWidth;
                 const height = window.innerHeight;
-                const margin = 50;
-                const nodeWidth = 120; // Increase node width for better spacing
-                const nodeHeight = 60;
 
                 const svg = d3.select('#tree').append('svg')
-                    .attr('width', '100%')
-                    .attr('height', '100%')
-                    .append('g');
+                    .attr('width', width)
+                    .attr('height', height)
+                    .append('g')
+                    .attr('transform', 'translate(50, 50)');
 
                 const root = d3.hierarchy(treeData);
-                const treeLayout = d3.tree().size([height - 2 * margin, width - 2 * margin]);
+                const treeLayout = d3.tree().size([height - 100, width - 100]);
                 treeLayout(root);
-
-                const maxWidth = d3.max(root.descendants(), d => d.x);
-                const svgWidth = Math.max(width, maxWidth + margin * 2);
-                svg.attr('transform', `translate(${margin}, ${margin})`);
 
                 svg.selectAll('line.link')
                     .data(root.descendants().slice(1))
@@ -154,10 +148,10 @@
                     });
 
                 node.append('rect')
-                    .attr('width', nodeWidth)
-                    .attr('height', nodeHeight)
-                    .attr('x', -nodeWidth / 2)
-                    .attr('y', -nodeHeight / 2);
+                    .attr('width', 120) // Fixed width
+                    .attr('height', 60) // Fixed height
+                    .attr('x', -60) // Center horizontally
+                    .attr('y', -30) // Center vertically
 
                 node.append('text')
                     .attr('class', 'count')
