@@ -119,11 +119,11 @@
                     .append('g');
 
                 const root = d3.hierarchy(treeData);
-                const treeLayout = d3.tree().size([window.innerHeight - 200, window.innerWidth - 200]);
+                const treeLayout = d3.tree().size([window.innerHeight - 100, window.innerWidth - 100]);
                 treeLayout(root);
 
-                const xOffset = (window.innerWidth - (root.height * 150)) / 2;
-                const yOffset = 100;
+                const xOffset = (window.innerWidth - root.descendants().reduce((max, node) => Math.max(max, node.x), 0) - 100) / 2;
+                const yOffset = 50;
 
                 svg.attr('transform', `translate(${xOffset}, ${yOffset})`);
 
