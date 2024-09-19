@@ -15,8 +15,8 @@
 
         /* CSS for black circles at observation points */
         .black-circle {
-            width: 6px;
-            height: 6px;
+            width: 4px;
+            height: 4px;
             background-color: black;
             border-radius: 50%;
             display: inline-block;
@@ -55,25 +55,25 @@ async function fetchObservations() {
             .filter(obs => obs.geojson && obs.geojson.coordinates)
             .map(obs => [obs.geojson.coordinates[1], obs.geojson.coordinates[0]]); // Lat, Lng
 
-        // Add black circle markers for each observation point
+        // Add smaller black circle markers for each observation point
         heatData.forEach(coords => {
             L.circleMarker(coords, {
-                radius: 4, // Small size for the black circle
-                fillColor: '#000000', // Black fill
-                color: '#000000', // Black border
+                radius: 2,  // Smaller size for the black circles
+                fillColor: '#000000',  // Black fill
+                color: '#000000',  // Black border
                 weight: 1,
                 opacity: 1,
                 fillOpacity: 1
             }).addTo(map);
         });
 
-        // Add heat map layer with stronger settings
+        // Add heat map layer with wider range
         if (heatData.length > 0) {
             L.heatLayer(heatData, {
-                radius: 35,  // Increase heatmap radius
-                blur: 25,    // Increase blur for stronger heat effect
-                maxZoom: 12, // Adjust max zoom where heat is visible
-                max: 1.0     // Heat intensity
+                radius: 60,   // Widened heatmap radius for broader range
+                blur: 40,     // Increased blur for a smoother, wider heat spread
+                maxZoom: 12,  // Adjust max zoom level for heat visibility
+                max: 0.8      // Heat intensity slightly reduced to match wider range
             }).addTo(map);
         } else {
             console.error('No valid coordinates found for the observations.');
