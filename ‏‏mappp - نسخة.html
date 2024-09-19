@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Genetic Mutations Tree</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body, html {
             margin: 0;
             padding: 0;
@@ -12,6 +16,7 @@
             background-color: #f5f5f5;
             overflow: hidden; /* Prevent scrollbars */
         }
+
         #tree {
             width: 100vw;
             height: 100vh;
@@ -20,39 +25,61 @@
             align-items: center;
             background-color: #ffffff;
         }
+
         svg {
-            font: 12px sans-serif;
+            font-size: 15px; /* Increased font size */
             overflow: visible; /* Allow overflow */
         }
+
         .node rect {
-            fill: #3498db;
-            stroke: #2c3e50;
-            stroke-width: 2px;
+            fill: #fff; /* White background */
+            stroke: steelblue; /* Steel blue border */
+            stroke-width: 1.5px; /* Thinner border */
+            border-radius: 4px; /* Rounded corners */
         }
+
         .node rect:hover {
-            fill: #2ecc71;
+            fill: steelblue; /* Change color on hover */
         }
+
         .node text.count {
             font-size: 12px;
-            fill: #ffffff;
+            fill: #ffffff; /* White text */
             text-anchor: middle;
             dominant-baseline: middle;
         }
+
         .node text.name {
             font-size: 10px;
-            fill: #000000;
+            fill: #000000; /* Black text */
             text-anchor: middle;
             dominant-baseline: start;
         }
+
         .link {
-            stroke: #95a5a6;
-            stroke-width: 2px;
+            stroke: #ccc; /* Lighter gray */
+            stroke-width: 1.5px;
         }
+
         .node:hover text.count {
-            fill: #e74c3c;
+            fill: #e74c3c; /* Change color on hover */
         }
+
         .node {
             cursor: pointer;
+        }
+
+        /* Tooltip styles */
+        .tip {
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            text-align: left;
+            visibility: hidden;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -126,7 +153,7 @@
                     .attr('transform', 'translate(0, 0)'); // Initial translation
 
                 const root = d3.hierarchy(treeData);
-                const treeLayout = d3.tree().size([height, width]);
+                const treeLayout = d3.tree().size([height, width - 100]); // Adjusted for margins
                 treeLayout(root);
 
                 svg.selectAll('line.link')
@@ -144,10 +171,10 @@
                     .attr('class', 'node')
                     .attr('transform', d => `translate(${d.x},${d.y})`)
                     .on('mouseover', function(event, d) {
-                        d3.select(this).select('rect').transition().duration(300).attr('stroke-width', 4);
+                        d3.select(this).select('rect').transition().duration(300).attr('stroke-width', 2.5);
                     })
                     .on('mouseout', function(event, d) {
-                        d3.select(this).select('rect').transition().duration(300).attr('stroke-width', 2);
+                        d3.select(this).select('rect').transition().duration(300).attr('stroke-width', 1.5);
                     });
 
                 node.append('rect')
