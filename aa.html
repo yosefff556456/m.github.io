@@ -1,118 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cluster Tree from CSV</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <style>
-    .node circle {
-      fill: steelblue;
-      stroke: black;
-      stroke-width: 2px;
-    }
-
-    .node text {
-      font: 12px sans-serif;
-      pointer-events: none; /* Prevents text from interfering with interactions */
-    }
-
-    .link {
-      fill: none;
-      stroke: #ccc;
-      stroke-width: 2px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genetic Mutations Tree</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        #tree {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #ffffff;
+            overflow: hidden; /* Hide overflow to prevent scrollbars */
+        }
+        svg {
+            font: 12px sans-serif;
+        }
+        .node circle {
+            fill: #3498db;
+            stroke: #2c3e50;
+            stroke-width: 2px;
+            transition: fill 0.3s ease;
+        }
+        .node circle:hover {
+            fill: #2ecc71;
+        }
+        .node text.count {
+            font-size: 12px;
+            fill: #ffffff;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+        .node text.name {
+            font-size: 10px;
+            fill: #000000;
+            text-anchor: middle;
+            dominant-baseline: start;
+        }
+        .link {
+            stroke: #95a5a6;
+            stroke-width: 2px;
+        }
+        .node:hover text.count {
+            fill: #e74c3c;
+        }
+        .node {
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <svg width="960" height="600"></svg>
+    <div id="tree"></div>
 
-  <script>
-    const width = 960;
-    const height = 600;
+    <!-- Load D3.js and PapaParse -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
-    const svg = d3.select("svg")
-      .attr("width", width)
-      .attr("height", height)
-      .append("g")
-      .attr("transform", "translate(40,0)");
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vRnDqmeMrSFgOBL5MHbulxNw7F9PO4PZBFXtBqEyPmiljTZWQCTwakxKiRneckhvknl-jpvOeR7PuJT/pub?output=csv', {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    const data = results.data;
+                    const treeData = buildTreeData(data);
+                    drawTree(treeData);
+                },
+                error: function(error) {
+                    console.error('Error loading CSV data:', error);
+                }
+            });
 
-    const treeLayout = d3.cluster().size([height, width - 160]);
+            function buildTreeData(data) {
+                let tree = { name: 'j', children: [], count: 0 };
+                let nodes = { 'j': tree };
+                let mutationCounts = {};
 
-    // Function to build the tree structure from mutation list
-    function buildTree(mutationList) {
-      const root = {};
+                data.forEach(row => {
+                    if (!row['mutationInfo']) return;
+                    const mutations = row['mutationInfo'].split('>').filter(Boolean);
+                    let currentNode = nodes['j'];
 
-      mutationList.forEach(mutationStr => {
-        const mutations = mutationStr.split('>').filter(Boolean);
-        let currentNode = root;
+                    mutations.forEach((mutation, index) => {
+                        if (!nodes[mutation]) {
+                            nodes[mutation] = { name: mutation, children: [], samples: [], count: 0 };
+                            currentNode.children.push(nodes[mutation]);
+                        }
+                        currentNode = nodes[mutation];
+                        if (index === mutations.length - 1) {
+                            if (!mutationCounts[mutation]) {
+                                mutationCounts[mutation] = 0;
+                            }
+                            mutationCounts[mutation]++;
+                        }
+                    });
+                    currentNode.samples.push({ name: row['personInfo'], location: row['locationInfo'] });
+                });
 
-        mutations.forEach(mutation => {
-          if (!currentNode[mutation]) {
-            currentNode[mutation] = {};  // Add new node if it doesn't exist
-          }
-          currentNode = currentNode[mutation];  // Move to the next node
+                Object.keys(nodes).forEach(key => {
+                    if (mutationCounts[key]) {
+                        nodes[key].count = mutationCounts[key];
+                    }
+                });
+
+                return tree;
+            }
+
+            function drawTree(treeData) {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                const svg = d3.select('#tree').append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .append('g')
+                    .attr('transform', 'translate(100, 100)');
+
+                const root = d3.hierarchy(treeData);
+                const treeLayout = d3.tree().size([width - 200, height - 200]);
+                treeLayout(root);
+
+                svg.selectAll('line.link')
+                    .data(root.descendants().slice(1))
+                    .enter().append('line')
+                    .attr('class', 'link')
+                    .attr('x1', d => d.x)
+                    .attr('y1', d => d.y)
+                    .attr('x2', d => d.parent.x)
+                    .attr('y2', d => d.parent.y);
+
+                const node = svg.selectAll('g.node')
+                    .data(root.descendants())
+                    .enter().append('g')
+                    .attr('class', 'node')
+                    .attr('transform', d => `translate(${d.x},${d.y})`)
+                    .on('mouseover', function(event, d) {
+                        d3.select(this).select('circle').transition().duration(300).attr('r', 12);
+                    })
+                    .on('mouseout', function(event, d) {
+                        d3.select(this).select('circle').transition().duration(300).attr('r', 10);
+                    });
+
+                node.append('circle')
+                    .attr('r', 10);
+
+                node.append('text')
+                    .attr('class', 'count')
+                    .attr('dy', '.3em')
+                    .text(d => d.data.count ? d.data.count : '');
+
+                node.append('text')
+                    .attr('class', 'name')
+                    .attr('dy', '1.5em')
+                    .text(d => d.data.name || '');
+
+                node.append('title').text(d => {
+                    if (!d.data.samples) return '';
+                    return d.data.samples.map(s => `${s.name} (${s.location})`).join('\n');
+                });
+
+                const zoom = d3.zoom()
+                    .scaleExtent([0.5, 3])
+                    .translateExtent([[-width, -height], [2 * width, 2 * height]])
+                    .on("zoom", (event) => {
+                        svg.attr("transform", event.transform);
+                        svg.selectAll('text').style('font-size', `${12 / event.transform.k}px`);
+                    });
+
+                d3.select("svg").call(zoom);
+            }
         });
-      });
-
-      return root;
-    }
-
-    // Function to convert the tree to D3.js format
-    function convertToD3Format(node, name = "root") {
-      const children = Object.keys(node).map(key => convertToD3Format(node[key], key));
-      return { name, children };
-    }
-
-    // Load CSV data from the URL
-    d3.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vRnDqmeMrSFgOBL5MHbulxNw7F9PO4PZBFXtBqEyPmiljTZWQCTwakxKiRneckhvknl-jpvOeR7PuJT/pub?output=csv").then(function(data) {
-      console.log('Data loaded successfully:', data);
-
-      // Extract the mutationInfo column
-      const mutationInfoData = data.map(d => d[':mutationInfo']);
-      console.log('Mutation info data:', mutationInfoData);
-
-      // Build the tree from the data
-      const mutationTree = buildTree(mutationInfoData);
-      console.log('Mutation tree structure:', mutationTree);
-
-      const d3TreeData = convertToD3Format(mutationTree);
-      console.log('D3 tree data:', d3TreeData);
-
-      // Convert the tree to D3 hierarchy format and draw it
-      const root = d3.hierarchy(d3TreeData);
-      treeLayout(root);
-
-      // Draw links
-      svg.selectAll(".link")
-        .data(root.links())
-        .enter()
-        .append("path")
-        .attr("class", "link")
-        .attr("d", d3.linkHorizontal()
-          .x(d => d.y)
-          .y(d => d.x));
-
-      // Draw nodes
-      const node = svg.selectAll(".node")
-        .data(root.descendants())
-        .enter()
-        .append("g")
-        .attr("class", "node")
-        .attr("transform", d => `translate(${d.y},${d.x})`);
-
-      node.append("circle")
-        .attr("r", 5);
-
-      node.append("text")
-        .attr("dy", 3)
-        .attr("x", d => d.children ? -8 : 8)
-        .style("text-anchor", d => d.children ? "end" : "start")
-        .text(d => d.data.name);
-
-    }).catch(function(error) {
-      console.error('Error loading or processing data:', error);
-    });
-  </script>
+    </script>
 </body>
 </html>
