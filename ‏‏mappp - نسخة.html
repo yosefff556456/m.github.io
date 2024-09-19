@@ -93,10 +93,7 @@
                         }
                         currentNode = nodes[mutation];
                         if (index === mutations.length - 1) {
-                            if (!mutationCounts[mutation]) {
-                                mutationCounts[mutation] = 0;
-                            }
-                            mutationCounts[mutation]++;
+                            mutationCounts[mutation] = (mutationCounts[mutation] || 0) + 1;
                         }
                     });
                     currentNode.samples.push({ name: row['personInfo'], location: row['locationInfo'] });
@@ -119,12 +116,12 @@
                 svg.setAttribute("height", height);
                 document.getElementById("tree").appendChild(svg);
 
-                function createTree(root, x, y, xOffset) {
+                function createTree(root, x, y, xOffset, level = 0) {
                     const children = root.children;
-                    const nodeWidth = 60;
-                    const nodeHeight = 30;
+                    const nodeWidth = 80;
+                    const nodeHeight = 40;
                     const verticalSpacing = 100;
-                    const horizontalSpacing = 150;
+                    const horizontalSpacing = 200;
 
                     // Draw node
                     const nodeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -167,7 +164,7 @@
                         line.setAttribute("y2", childY - y - nodeHeight / 2);
                         svg.appendChild(line);
 
-                        createTree(child, childX, childY, xOffset / 2);
+                        createTree(child, childX, childY, xOffset / 2, level + 1);
                     });
                 }
 
