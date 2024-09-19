@@ -23,13 +23,13 @@
         svg {
             font: 12px sans-serif;
         }
-        .node rect {
+        .node circle {
             fill: #3498db;
             stroke: #2c3e50;
             stroke-width: 2px;
             transition: fill 0.3s ease;
         }
-        .node rect:hover {
+        .node circle:hover {
             fill: #2ecc71;
         }
         .node text.count {
@@ -42,7 +42,7 @@
             font-size: 10px;
             fill: #000000;
             text-anchor: middle;
-            dominant-baseline: hanging;
+            dominant-baseline: start;
         }
         .link {
             stroke: #95a5a6;
@@ -54,11 +54,25 @@
         .node {
             cursor: pointer;
         }
+        .node rect {
+            fill: #3498db;
+            stroke: #2c3e50;
+            stroke-width: 2px;
+        }
+        .node rect:hover {
+            fill: #2ecc71;
+        }
+        .node text.name {
+            font-size: 12px;
+            fill: #ffffff;
+        }
     </style>
 </head>
 <body>
     <div id="tree"></div>
 
+    <!-- Load D3.js and PapaParse -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
     <script>
@@ -77,14 +91,14 @@
             });
 
             function buildTreeData(data) {
-                let tree = { name: 'j', children: [], count: 0 };
-                let nodes = { 'j': tree };
+                let tree = { name: 'Root', children: [], count: 0 };
+                let nodes = { 'Root': tree };
                 let mutationCounts = {};
 
                 data.forEach(row => {
                     if (!row['mutationInfo']) return;
                     const mutations = row['mutationInfo'].split('>').filter(Boolean);
-                    let currentNode = nodes['j'];
+                    let currentNode = nodes['Root'];
 
                     mutations.forEach((mutation, index) => {
                         if (!nodes[mutation]) {
@@ -93,7 +107,10 @@
                         }
                         currentNode = nodes[mutation];
                         if (index === mutations.length - 1) {
-                            mutationCounts[mutation] = (mutationCounts[mutation] || 0) + 1;
+                            if (!mutationCounts[mutation]) {
+                                mutationCounts[mutation] = 0;
+                            }
+                            mutationCounts[mutation]++;
                         }
                     });
                     currentNode.samples.push({ name: row['personInfo'], location: row['locationInfo'] });
@@ -111,64 +128,67 @@
             function drawTree(treeData) {
                 const width = window.innerWidth;
                 const height = window.innerHeight;
-                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                svg.setAttribute("width", width);
-                svg.setAttribute("height", height);
-                document.getElementById("tree").appendChild(svg);
+                const svg = d3.select('#tree').append('svg')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .append('g')
+                    .attr('transform', 'translate(100, 100)');
 
-                function createTree(root, x, y, xOffset, level = 0) {
-                    const children = root.children;
-                    const nodeWidth = 100;
-                    const nodeHeight = 50;
-                    const verticalSpacing = 150;
-                    const horizontalSpacing = 200;
+                const root = d3.hierarchy(treeData);
+                const treeLayout = d3.tree().size([width - 200, height - 200]);
+                treeLayout(root);
 
-                    // Draw node
-                    const nodeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                    nodeGroup.setAttribute("transform", `translate(${x}, ${y})`);
+                svg.selectAll('line.link')
+                    .data(root.descendants().slice(1))
+                    .enter().append('line')
+                    .attr('class', 'link')
+                    .attr('x1', d => d.x)
+                    .attr('y1', d => d.y)
+                    .attr('x2', d => d.parent.x)
+                    .attr('y2', d => d.parent.y);
 
-                    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                    rect.setAttribute("x", -nodeWidth / 2);
-                    rect.setAttribute("y", -nodeHeight / 2);
-                    rect.setAttribute("width", nodeWidth);
-                    rect.setAttribute("height", nodeHeight);
-                    rect.setAttribute("class", "node");
-                    nodeGroup.appendChild(rect);
-
-                    const nameText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    nameText.setAttribute("class", "name");
-                    nameText.setAttribute("x", 0);
-                    nameText.setAttribute("y", -nodeHeight / 2 + 5);
-                    nameText.textContent = root.name;
-                    nodeGroup.appendChild(nameText);
-
-                    const countText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    countText.setAttribute("class", "count");
-                    countText.setAttribute("x", 0);
-                    countText.setAttribute("y", nodeHeight / 2 - 10);
-                    countText.textContent = root.count || '';
-                    nodeGroup.appendChild(countText);
-
-                    svg.appendChild(nodeGroup);
-
-                    // Draw links and child nodes
-                    children.forEach((child, index) => {
-                        const childX = x + (index - (children.length - 1) / 2) * horizontalSpacing;
-                        const childY = y + verticalSpacing;
-
-                        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                        line.setAttribute("class", "link");
-                        line.setAttribute("x1", 0);
-                        line.setAttribute("y1", nodeHeight / 2);
-                        line.setAttribute("x2", childX - x);
-                        line.setAttribute("y2", childY - y - nodeHeight / 2);
-                        svg.appendChild(line);
-
-                        createTree(child, childX, childY, xOffset / 2, level + 1);
+                const node = svg.selectAll('g.node')
+                    .data(root.descendants())
+                    .enter().append('g')
+                    .attr('class', 'node')
+                    .attr('transform', d => `translate(${d.x},${d.y})`)
+                    .on('mouseover', function(event, d) {
+                        d3.select(this).select('circle').transition().duration(300).attr('r', 14);
+                    })
+                    .on('mouseout', function(event, d) {
+                        d3.select(this).select('circle').transition().duration(300).attr('r', 10);
                     });
-                }
 
-                createTree(treeData, width / 2, 100, width / 2);
+                node.append('rect')
+                    .attr('width', 50)
+                    .attr('height', 30)
+                    .attr('x', -25)
+                    .attr('y', -15);
+
+                node.append('text')
+                    .attr('class', 'count')
+                    .attr('dy', '.3em')
+                    .text(d => d.data.count ? d.data.count : '');
+
+                node.append('text')
+                    .attr('class', 'name')
+                    .attr('dy', '1.5em')
+                    .text(d => d.data.name || '');
+
+                node.append('title').text(d => {
+                    if (!d.data.samples) return '';
+                    return d.data.samples.map(s => `${s.name} (${s.location})`).join('\n');
+                });
+
+                const zoom = d3.zoom()
+                    .scaleExtent([0.5, 3])
+                    .translateExtent([[-width, -height], [2 * width, 2 * height]])
+                    .on("zoom", (event) => {
+                        svg.attr("transform", event.transform);
+                        svg.selectAll('text').style('font-size', `${12 / event.transform.k}px`);
+                    });
+
+                d3.select("svg").call(zoom);
             }
         });
     </script>
