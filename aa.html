@@ -3,196 +3,326 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Mutations Tree</title>
+    <title>Migration Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
+        #map { height: 75vh; }
+        #controls { height: 20vh; display: flex; align-items: center; justify-content: center; }
+        .control-button { margin: 0 10px; padding: 10px; }
+        #timeline-container { display: flex; align-items: center; position: relative; }
+        #timeline { width: 300px; margin: 0 10px; }
+        #timeline::-webkit-slider-runnable-track {
+            background: linear-gradient(to right, #FF5733 0%, #FF5733 20%, #33FF57 20%, #33FF57 40%, #3357FF 40%, #3357FF 60%, #FF33A1 60%, #FF33A1 100%);
+            height: 8px;
+            border-radius: 5px;
         }
-        #tree {
-            width: 100%;
-            height: 100vh;
+        #timeline-labels {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #ffffff;
-            overflow: hidden;
+            justify-content: space-between;
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            font-size: 0.8em;
         }
-        svg {
-            font: 12px sans-serif;
+        #current-time { font-size: 1.2em; margin-left: 10px; }
+        #tracker {
+            position: absolute;
+            bottom: 35px;
+            left: 0;
+            width: 150px;
+            height: 50px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-size: 0.9em;
+            text-align: center;
+            visibility: hidden;
         }
-        .node circle {
-            fill: #3498db;
-            stroke: #2c3e50;
-            stroke-width: 2px;
-            transition: fill 0.3s ease;
-        }
-        .node circle:hover {
-            fill: #2ecc71;
-        }
-        .node text.count {
-            font-size: 12px;
-            fill: #ffffff;
-            text-anchor: middle;
-            dominant-baseline: middle;
-        }
-        .node text.name {
-            font-size: 10px;
-            fill: #000000;
-            text-anchor: middle;
-            dominant-baseline: start;
-        }
-        .link {
-            stroke: #95a5a6;
-            stroke-width: 2px;
-        }
-        .node:hover text.count {
-            fill: #e74c3c;
-        }
-        .node {
-            cursor: pointer;
+        #timeline-container:hover #tracker {
+            visibility: visible;
         }
     </style>
 </head>
 <body>
-    <div id="tree"></div>
+    <div id="map"></div>
+    <div id="controls">
+        <button id="play" class="control-button">Play</button>
+        <button id="pause" class="control-button">Pause</button>
+        <button id="stop" class="control-button">Stop</button>
+        <div id="timeline-container">
+            <input type="range" id="timeline" min="0" max="100" value="0" />
+            <span id="current-time">0:00</span>
+            <div id="tracker">Migration Point Info</div>
+            <div id="timeline-labels"></div>
+        </div>
+    </div>
 
-    <!-- Load D3.js and PapaParse -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vRnDqmeMrSFgOBL5MHbulxNw7F9PO4PZBFXtBqEyPmiljTZWQCTwakxKiRneckhvknl-jpvOeR7PuJT/pub?output=csv', {
-                download: true,
-                header: true,
-                complete: function(results) {
-                    const data = results.data;
-                    const treeData = buildTreeData(data);
-                    drawTree(treeData);
-                },
-                error: function(error) {
-                    console.error('Error loading CSV data:', error);
+        // Initialize map
+        var map = L.map('map').setView([25.0, 45.0], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Define image overlays with location and showFrom times
+        const imageOverlays = [
+            { url: '31.png', showFrom: 5, bounds: [[51.5, -0.08], [51.5 + (20000 / 10000), -0.08 + (20000 / 10000)]] },
+            { url: '33.png', showFrom: 5, bounds: [[41.919, 45.527], [41.919 + (20000 / 10000), 45.527 + (20000 / 10000)]] },
+            { url: '33.png', showFrom: 40, bounds: [[51.5, -0.08], [51.5 + (20000 / 10000), -0.08 + (20000 / 10000)]] }
+        ];
+
+        // Initialize image overlays and manage their visibility
+        const overlayLayers = imageOverlays.map(imageOverlay => {
+            return {
+                layer: L.imageOverlay(imageOverlay.url, imageOverlay.bounds).addTo(map).setOpacity(0),
+                showFrom: imageOverlay.showFrom
+            };
+        });
+
+        // GeoJSON Polygons with different showFrom times
+        const polygonsGeoJSON = [
+            {
+                "type": "Feature",
+                "properties": { "showFrom": 60, "color1": 'black', "color2": 'black', "color3": 'red' },
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [35.266, 32.99],
+                            [37.09, 34.488],
+                            [41.682, 34.089],
+                            [47.878, 25.543],
+                            [50.449, 16.721],
+                            [48.691, 14.009],
+                            [43.242, 12.555],
+                            [39.771, 21.371],
+                            [35.222, 28.053],
+                            [35.42, 31.654],
+                            [35.266, 32.99]
+                        ]
+                    ]
+                }
+            },
+            {
+                "type": "Feature",
+                "properties": { "showFrom": 40, "color1": 'red', "color2": 'red', "color3": 'red' },
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [35.804, 36.342],
+                            [37.474, 36.924],
+                            [39.353, 35.506],
+                            [40.43, 33.248],
+                            [39.551, 30.978],
+                            [35.068, 28.845],
+                            [34.211, 31.26],
+                            [35.969, 34.543],
+                            [35.804, 36.342]
+                        ]
+                    ]
+                }
+            },
+            {
+                "type": "Feature",
+                "properties": { "showFrom": 10, "color1": 'red', "color2": 'green' },
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [53.789, 36.845],
+                            [60.205, 32.991],
+                            [59.282, 25.285],
+                            [51.504, 28.033],
+                            [43.462, 35.889],
+                            [41.089, 40.881],
+                            [44.341, 41.903],
+                            [49.219, 37.927],
+                            [51.987, 36.245],
+                            [53.789, 36.845]
+                        ]
+                    ]
+                }
+            },
+            {
+                "type": "Feature",
+                "properties": { "showFrom": 20, "color1": 'red', "color2": 'red', "color3": 'green' },
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [39.023, 40.18],
+                            [42.319, 40.548],
+                            [44.648, 38.238],
+                            [47.813, 35.174],
+                            [55.547, 28.692],
+                            [49.175, 30.488],
+                            [40.21, 36.031],
+                            [37.222, 34.127],
+                            [35.991, 35.031],
+                            [36.563, 37.055],
+                            [33.926, 36.422],
+                            [37.969, 40.146],
+                            [39.023, 40.18]
+                        ]
+                    ]
+                }
+            }
+        ];
+
+        // Create the polygon layers and set initial styles
+        const polygonLayers = polygonsGeoJSON.map(polygon => L.geoJSON(polygon, {
+            style: {
+                color: 'transparent',   // Hide the outline
+                fillColor: 'blue',      // Default fill color
+                fillOpacity: 0          // Initially hidden (transparent)
+            }
+        }).addTo(map));
+
+        // Define migration points
+        const migrationPoints = [
+            { lat: 30.388, lng: 33.914, time: 0, iconUrl: '1111.png', info: 'Point 1: Origin' },
+            { lat: 31.136, lng: 35.787, time: 5, iconUrl: '1111.png', info: 'Point 2: Movement' },
+            { lat: 33.274, lng: 38.030, time: 7, iconUrl: '1111.png', info: 'Point 3: Expansion' },
+            { lat: 36.628, lng: 50.389, time: 10, iconUrl: '1111.png', info: 'Point 4: Settlement' },
+            { lat: 39.409, lng: 41.013, time: 15, iconUrl: '1111.png', info: 'Point 5: Expansion' },
+            { lat: 38.297, lng: 40.221, time: 20, iconUrl: '1111.png', info: 'Point 6: Movement' },
+            { lat: 36.448, lng: 37.925, time: 40, iconUrl: '1111.png', info: 'Point 4: Settlement' },
+            { lat: 33.596, lng: 36.013, time: 50, iconUrl: '1111.png', info: 'Point 4: Settlement' },
+            { lat: 29.497, lng: 39.221, time: 60, iconUrl: '1111.png', info: 'Point 8: Settlement' }
+        ];
+
+        // Create migration markers and add them to the map
+        const migrationMarkers = migrationPoints.map(point => {
+            const icon = L.icon({
+                iconUrl: point.iconUrl,
+                iconSize: [77, 77], // Adjust size as needed
+            });
+            return L.marker([point.lat, point.lng], { icon }).addTo(map).setOpacity(0); // Initially invisible
+        });
+
+        const polyline = L.polyline([], { color: 'black' }).addTo(map);
+
+        // Function to update map
+        function updateMap(time) {
+            const currentTime = time || (currentStep / 60) * 60;
+            const currentPoints = migrationPoints.filter(p => currentTime >= p.time);
+            polyline.setLatLngs(currentPoints.map(p => [p.lat, p.lng]));
+
+            // Update migration markers
+            migrationMarkers.forEach((marker, index) => {
+                marker.setOpacity(currentTime >= migrationPoints[index].time ? 1 : 0);
+            });
+
+            // Update image overlays
+            overlayLayers.forEach(overlay => {
+                overlay.layer.setOpacity(currentTime >= overlay.showFrom ? 1 : 0);
+            });
+
+            // Update polygon visibility and color based on time
+            polygonLayers.forEach((layer, index) => {
+                const polygon = polygonsGeoJSON[index];
+                if (currentTime >= polygon.properties.showFrom) {
+                    layer.setStyle({
+                        fillOpacity: 0.5,       // Show polygon
+                        fillColor: getColorForTime(currentTime, polygon.properties), // Change color based on time
+                        color: 'transparent'    // Hide outline
+                    });
+                } else {
+                    layer.setStyle({ fillOpacity: 0 }); // Hide polygon
                 }
             });
 
-            function buildTreeData(data) {
-                let tree = { name: 'j', children: [], count: 0 };
-                let nodes = { 'j': tree };
-                let mutationCounts = {};
+            document.getElementById('current-time').textContent = formatTime(currentTime);
+        }
 
-                data.forEach(row => {
-                    if (!row['mutationInfo']) return;
-                    const mutations = row['mutationInfo'].split('>').filter(Boolean);
-                    let currentNode = nodes['j'];
-
-                    mutations.forEach((mutation, index) => {
-                        if (!nodes[mutation]) {
-                            nodes[mutation] = { name: mutation, children: [], samples: [], count: 0 };
-                            currentNode.children.push(nodes[mutation]);
-                        }
-                        currentNode = nodes[mutation];
-                        if (index === mutations.length - 1) {
-                            if (!mutationCounts[mutation]) {
-                                mutationCounts[mutation] = 0;
-                            }
-                            mutationCounts[mutation]++;
-                        }
-                    });
-                    currentNode.samples.push({ name: row['personInfo'], location: row['locationInfo'] });
-                });
-
-                Object.keys(nodes).forEach(key => {
-                    if (mutationCounts[key]) {
-                        nodes[key].count = mutationCounts[key];
-                    }
-                });
-
-                return tree;
+        // Function to determine polygon color based on time
+        function getColorForTime(time, properties) {
+            if (time >= 60) {
+                return properties.color3 || 'black'; // Default color if not specified
+            } else if (time >= 20) {
+                return properties.color2 || 'red'; // Default color if not specified
+            } else {
+                return properties.color1 || 'red'; // Default color if not specified
             }
+        }
 
-            function drawTree(treeData) {
-                const width = window.innerWidth;
-                const height = window.innerHeight;
-                const svg = d3.select('#tree').append('svg')
-                    .attr('width', '100%')
-                    .attr('height', '100%')
-                    .attr('viewBox', `0 0 ${width} ${height}`)
-                    .append('g')
-                    .attr('transform', 'translate(100, 100)');
+        // Manually set the first migration point visible on page load
+        function showFirstPoint() {
+            migrationMarkers[0].setOpacity(1); // Make the first point visible
+            polyline.setLatLngs([[migrationPoints[0].lat, migrationPoints[0].lng]]); // Update polyline to start at the first point
+        }
 
-                const root = d3.hierarchy(treeData);
-                const treeLayout = d3.tree()
-                    .size([width - 200, height - 200])
-                    .separation((a, b) => a.parent === b.parent ? 1 : 2);
+        // Show the first point and polyline on map load
+        showFirstPoint();
 
-                treeLayout(root);
+        // Animation controls (play, pause, stop)
+        let currentStep = 0;
+        let isPlaying = false;
+        let lastTimestamp = null;
 
-                svg.selectAll('line.link')
-                    .data(root.descendants().slice(1))
-                    .enter().append('line')
-                    .attr('class', 'link')
-                    .attr('x1', d => d.x)
-                    .attr('y1', d => d.y)
-                    .attr('x2', d => d.parent.x)
-                    .attr('y2', d => d.parent.y);
+        function playAnimation(timestamp) {
+            if (!isPlaying) return;
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const progress = timestamp - lastTimestamp;
 
-                const node = svg.selectAll('g.node')
-                    .data(root.descendants())
-                    .enter().append('g')
-                    .attr('class', 'node')
-                    .attr('transform', d => `translate(${d.x},${d.y})`)
-                    .on('mouseover', function(event, d) {
-                        d3.select(this).select('circle').transition().duration(300).attr('r', 12);
-                    })
-                    .on('mouseout', function(event, d) {
-                        d3.select(this).select('circle').transition().duration(300).attr('r', 10);
-                    });
+            currentStep += progress / 1000; // Update time progression
 
-                node.append('circle')
-                    .attr('r', 10);
-
-                node.append('text')
-                    .attr('class', 'count')
-                    .attr('dy', '.3em')
-                    .text(d => d.data.count ? d.data.count : '');
-
-                node.append('text')
-                    .attr('class', 'name')
-                    .attr('dy', '1.5em')
-                    .text(d => d.data.name || '');
-
-                node.append('title').text(d => {
-                    if (!d.data.samples) return '';
-                    return d.data.samples.map(s => `${s.name} (${s.location})`).join('\n');
-                });
-
-                const zoom = d3.zoom()
-                    .scaleExtent([0.5, 3])
-                    .translateExtent([[-width, -height], [2 * width, 2 * height]])
-                    .on("zoom", (event) => {
-                        svg.attr("transform", event.transform);
-                        svg.selectAll('text').style('font-size', `${12 / event.transform.k}px`);
-                    });
-
-                d3.select("svg").call(zoom);
-
-                window.addEventListener('resize', () => {
-                    const newWidth = window.innerWidth;
-                    const newHeight = window.innerHeight;
-                    svg.attr('viewBox', `0 0 ${newWidth} ${newHeight}`);
-                    treeLayout.size([newWidth - 200, newHeight - 200]);
-                    treeLayout(root);
-                    svg.selectAll('line.link')
-                        .attr('x1', d => d.x)
-                        .attr('y1', d => d.y)
-                        .attr('x2', d => d.parent.x)
-                        .attr('y2', d => d.parent.y);
-                    svg.selectAll('g.node').attr('transform', d => `translate(${d.x},${d.y})`);
-                });
+            if (currentStep <= 60) {
+                updateMap(currentStep);  // Update the map with current time
+                document.getElementById('timeline').value = (currentStep / 60) * 100; // Update timeline progress bar
+                lastTimestamp = timestamp;
+                requestAnimationFrame(playAnimation);  // Keep playing animation
+            } else {
+                holdAtEnd();  // Call function to hold the player at the end when time reaches maximum
             }
+        }
+
+        function holdAtEnd() {
+            isPlaying = false;  // Pause the animation
+            currentStep = 60;  // Set the current step to maximum (end of the timeline)
+            updateMap(currentStep);  // Ensure the last frame is updated and visible
+            document.getElementById('timeline').value = 100;  // Update timeline to show 100% progress
+        }
+
+        function startAnimation() {
+            if (!isPlaying && currentStep < 60) {
+                isPlaying = true;
+                requestAnimationFrame(playAnimation);
+            }
+        }
+
+        function pauseAnimation() {
+            isPlaying = false;
+        }
+
+        function stopAnimation() {
+            isPlaying = false;
+            currentStep = 0;  // Reset to start when manually stopping
+            updateMap(currentStep);
+            document.getElementById('timeline').value = 0;  // Reset the timeline progress bar to 0
+        }
+
+        // Format the time display
+        function formatTime(time) {
+            const minutes = Math.floor(time / 60);
+            const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+            return `${minutes}:${seconds}`;
+        }
+
+        // Event listeners for play, pause, stop buttons
+        document.getElementById('play').addEventListener('click', startAnimation);
+        document.getElementById('pause').addEventListener('click', pauseAnimation);
+        document.getElementById('stop').addEventListener('click', stopAnimation);
+
+        // Timeline input to seek through animation
+        document.getElementById('timeline').addEventListener('input', (e) => {
+            const value = e.target.value;
+            currentStep = (value / 100) * 60;
+            updateMap(currentStep);
         });
     </script>
 </body>
