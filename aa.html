@@ -51,6 +51,7 @@
         <div id="timeline-container">
             <input type="range" id="timeline" min="0" max="100" value="0" />
             <span id="current-time">0:00</span>
+            <div id="timeline-labels"></div>
         </div>
     </div>
 
@@ -64,7 +65,12 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-
+        // Define image overlays with location and showFrom times
+        const imageOverlays = [
+            { url: '', showFrom: 5, bounds: [[51.5, -0.08], [51.5 + (20000 / 10000), -0.08 + (20000 / 10000)]] },
+            { url: '', showFrom: 5, bounds: [[41.919, 45.527], [41.919 + (20000 / 10000), 45.527 + (20000 / 10000)]] },
+            { url: '', showFrom: 40, bounds: [[51.5, -0.08], [51.5 + (20000 / 10000), -0.08 + (20000 / 10000)]] }
+        ];
 
         // Initialize image overlays and manage their visibility
         const overlayLayers = imageOverlays.map(imageOverlay => {
@@ -308,6 +314,7 @@
         // Event listeners for play, pause, stop buttons
         document.getElementById('play').addEventListener('click', startAnimation);
         document.getElementById('pause').addEventListener('click', pauseAnimation);
+        document.getElementById('stop').addEventListener('click', stopAnimation);
 
         // Timeline input to seek through animation
         document.getElementById('timeline').addEventListener('input', (e) => {
