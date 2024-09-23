@@ -53,7 +53,6 @@
             <input type="range" id="timeline" min="0" max="100" value="0" />
             <span id="current-time">0:00</span>
             <div id="tracker">Migration Point Info</div>
-            <div id="timeline-labels"></div>
         </div>
     </div>
 
@@ -316,7 +315,6 @@
         // Event listeners for play, pause, stop buttons
         document.getElementById('play').addEventListener('click', startAnimation);
         document.getElementById('pause').addEventListener('click', pauseAnimation);
-        document.getElementById('stop').addEventListener('click', stopAnimation);
 
         // Timeline input to seek through animation
         document.getElementById('timeline').addEventListener('input', (e) => {
