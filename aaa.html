@@ -10,6 +10,10 @@
             height: 600px;
             width: 100%;
         }
+        .popup-buttons {
+            display: flex;
+            justify-content: space-between;
+        }
     </style>
 </head>
 <body>
@@ -29,15 +33,67 @@
 
     // تحميل ملف CSV من Google Sheets
     d3.csv("https://docs.google.com/spreadsheets/d/1YBmoRtfvT-F3fwTlZcx2JbQTRX1rhOd8ZPkjRrj-Vvc/pub?output=csv").then(function(data) {
+        const locations = {};
+
+        // تنظيم البيانات حسب الإحداثيات
         data.forEach(function(d) {
-            // تحويل القيم إلى أرقام
             var lat = +d.lat;
             var lon = +d.lon;
+            var key = lat + ',' + lon;
 
-            // إضافة علامة لكل موقع
-            var marker = L.marker([lat, lon]).addTo(map)
-                .bindPopup("<b>" + d.name + "</b><br>" + d.des + "<br>" + d.cul);
+            if (!locations[key]) {
+                locations[key] = [];
+            }
+            locations[key].push({
+                name: d.name,
+                des: d.des,
+                cul: d.cul
+            });
         });
+
+        // إضافة العلامات إلى الخريطة
+        for (const key in locations) {
+            const coords = key.split(',').map(Number);
+            const markers = locations[key];
+            const popupContent = createPopupContent(markers);
+
+            L.marker(coords).addTo(map).bindPopup(popupContent);
+        }
+    });
+
+    function createPopupContent(markers) {
+        let content = '<div id="popupContent">';
+        content += markers.map((marker, index) => `
+            <div class="marker-info" data-index="${index}">
+                <b>${marker.name}</b><br>${marker.des}<br>${marker.cul}<br>
+            </div>
+        `).join('');
+        content += `
+            <div class="popup-buttons">
+                <button id="prevBtn">السابق</button>
+                <button id="nextBtn">التالي</button>
+            </div>
+        `;
+        content += '</div>';
+        return content;
+    }
+
+    // الأحداث للتنقل بين العلامات
+    document.addEventListener('click', function(event) {
+        if (event.target.id === 'prevBtn' || event.target.id === 'nextBtn') {
+            const markerInfoElements = document.querySelectorAll('.marker-info');
+            let currentIndex = Array.from(markerInfoElements).findIndex(el => el.style.display !== 'none');
+
+            if (event.target.id === 'prevBtn') {
+                currentIndex = (currentIndex > 0) ? currentIndex - 1 : markerInfoElements.length - 1;
+            } else {
+                currentIndex = (currentIndex < markerInfoElements.length - 1) ? currentIndex + 1 : 0;
+            }
+
+            markerInfoElements.forEach((el, index) => {
+                el.style.display = (index === currentIndex) ? 'block' : 'none';
+            });
+        }
     });
 </script>
 
