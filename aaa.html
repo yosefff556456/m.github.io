@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaflet Map with Custom Popup and Circle Range</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  <style>
+    /* ملء الخريطة لنافذة المتصفح بالكامل */
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* تصميم النافذة المنبثقة */
+    .popup-name {
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .popup-des {
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <script>
+    // إنشاء الخريطة وتحديد المركز الافتراضي
+    var map = L.map('map').setView([24.7136, 46.6753], 5); // المركز على السعودية
+
+    // إضافة طبقة الخرائط من OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+    }).addTo(map);
+
+    // دائرة النطاق (سيتم تفعيلها عند نقطة معينة)
+    var rangeCircle;
+
+    // رابط ملف CSV من Google Sheets
+    var csvUrl = 'https://docs.google.com/spreadsheets/d/1YBmoRtfvT-F3fwTlZcx2JbQTRX1rhOd8ZPkjRrj-Vvc/pub?output=csv';
+
+    // تحميل وتحليل بيانات CSV باستخدام PapaParse
+    Papa.parse(csvUrl, {
+      download: true, // تحميل البيانات من الرابط
+      header: true, // التعامل مع رؤوس الأعمدة
+      dynamicTyping: true, // تحويل القيم تلقائيًا إلى أرقام حيثما أمكن
+      complete: function(results) {
+        console.log(results.data); // تحقق من البيانات المُحمّلة
+
+        // المرور على كل صف في ملف CSV
+        results.data.forEach(function(row) {
+          if (row.lat && row.lon) {
+            // إضافة علامة إلى الخريطة بناءً على lat و lon
+            var marker = L.marker([row.lat, row.lon]).addTo(map)
+              .bindPopup(
+                `<div class="popup-name">${row.name}</div>
+                <div class="popup-des">${row.des}</div>`
+              );
+
+            // استماع إلى حدث الفتح للنافذة المنبثقة لتفعيل النطاق بناءً على cul
+            marker.on('popupopen', function() {
+              if (row.cul === 'قيمة معينة') { // استبدل 'قيمة معينة' بالقيمة المطلوبة
+                // إذا كانت هناك دائرة سابقة، أزلها
+                if (rangeCircle) {
+                  map.removeLayer(rangeCircle);
+                }
+                
+                // إضافة دائرة النطاق حول النقطة الحالية
+                rangeCircle = L.circle([row.lat, row.lon], {
+                  color: 'red',
+                  radius: 50000 // نصف القطر بالمتر (50 كم هنا كمثال)
+                }).addTo(map);
+              }
+            });
+
+            // استماع إلى حدث غلق النافذة المنبثقة لإزالة النطاق
+            marker.on('popupclose', function() {
+              if (rangeCircle) {
+                map.removeLayer(rangeCircle);
+              }
+            });
+          }
+        });
+      }
+    });
+  </script>
+
+</body>
+</html>
