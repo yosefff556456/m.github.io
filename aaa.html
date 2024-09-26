@@ -1,108 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leaflet Map with Shared Popups and Polygons</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-  <style>
-    html, body, #map {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-
-    .popup-name {
-      font-weight: bold;
-      font-size: 18px;
-      color: #000;
-    }
-    .popup-des {
-      font-size: 14px;
-      color: #555;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خريطة باستخدام Leaflet</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
 
-  <div id="map"></div>
+<div id="map"></div>
 
-  <script>
-    // إنشاء خريطة
-    const map = L.map('map').setView([24.7136, 46.6753], 5);
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script>
+    // إعداد الخريطة
+    var map = L.map('map').setView([25.0, 45.0], 5); // يمكنك تغيير الإحداثيات إلى مكان مناسب
 
-    // إضافة طبقة خريطة
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+    // إضافة خريطة الأساس
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+    }).addTo(map);
 
-    const markers = {}; // تخزين النقاط
-    let polygonLayer; // لتخزين المضلع الحالي
+    // تحميل ملف CSV من Google Sheets
+    d3.csv("https://docs.google.com/spreadsheets/d/1YBmoRtfvT-F3fwTlZcx2JbQTRX1rhOd8ZPkjRrj-Vvc/pub?output=csv").then(function(data) {
+        data.forEach(function(d) {
+            // تحويل القيم إلى أرقام
+            var lat = +d.lat;
+            var lon = +d.lon;
 
-    // رابط ملف CSV
-    const csvUrl = 'https://docs.google.com/spreadsheets/d/1YBmoRtfvT-F3fwTlZcx2JbQTRX1rhOd8ZPkjRrj-Vvc/pub?output=csv';
-
-    // تحميل البيانات من CSV
-    Papa.parse(csvUrl, {
-      download: true,
-      header: true,
-      dynamicTyping: true,
-      complete: function(results) {
-        results.data.forEach(row => {
-          if (row.lat && row.lon) {
-            const latLonKey = `${row.lat},${row.lon}`; // مفتاح للإحداثيات
-
-            // إضافة أو تحديث العلامة
-            if (!markers[latLonKey]) {
-              const marker = L.marker([row.lat, row.lon]).addTo(map)
-                .bindPopup(
-                  `<div class="popup-name">${row.name}</div>
-                   <div class="popup-des">${row.des}</div>`
-                );
-              
-              markers[latLonKey] = marker; // حفظ العلامة في المصفوفة
-            } else {
-              // تحديث المحتوى إذا كانت النقطة موجودة
-              markers[latLonKey].setPopupContent(
-                markers[latLonKey].getPopup().getContent() + 
-                `<br><div class="popup-name">${row.name}</div><div class="popup-des">${row.des}</div>`
-              );
-            }
-
-            // معالجة الـ `cul` لرسم المضلع
-            if (row.cul) {
-              try {
-                const coordinates = JSON.parse(row.cul); // تحليل بيانات cul
-                const latLngs = coordinates.map(coord => [coord[1], coord[0]]); // تحويل (lat, lon) إلى (lon, lat)
-
-                marker.on('popupopen', function() {
-                  if (polygonLayer) {
-                    map.removeLayer(polygonLayer); // إزالة المضلع القديم
-                  }
-
-                  polygonLayer = L.polygon(latLngs, {
-                    color: 'blue',
-                    fillColor: '#3388ff',
-                    fillOpacity: 0.5,
-                  }).addTo(map);
-
-                  map.fitBounds(polygonLayer.getBounds()); // ضبط عرض الخريطة ليتناسب مع المضلع
-                });
-
-                marker.on('popupclose', function() {
-                  if (polygonLayer) {
-                    map.removeLayer(polygonLayer); // إزالة المضلع عند غلق popup
-                  }
-                });
-              } catch (error) {
-                console.error("Error parsing cul data:", error);
-              }
-            }
-          }
+            // إضافة علامة لكل موقع
+            var marker = L.marker([lat, lon]).addTo(map)
+                .bindPopup("<b>" + d.name + "</b><br>" + d.des + "<br>" + d.cul);
         });
-      }
     });
-  </script>
+</script>
 
 </body>
 </html>
