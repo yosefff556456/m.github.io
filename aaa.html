@@ -71,12 +71,17 @@
                 map.removeLayer(polygonLayer);
               }
 
-              // إذا كانت قيمة cul تحتوي على إحداثيات لمضلع
-              if (row.cul && row.cul.startsWith('POLYGON')) {
-                var coordinates = parsePolygon(row.cul);
+              // إذا كانت قيمة cul تحتوي على إحداثيات مضلع (تنسيق المصفوفة)
+              if (row.cul && Array.isArray(JSON.parse(row.cul))) {
+                var coordinates = JSON.parse(row.cul);
                 
+                // تحويل الإحداثيات إلى تنسيق Leaflet
+                var latLngs = coordinates.map(function(coord) {
+                  return [coord[1], coord[0]]; // نستخدم [lat, lon]
+                });
+
                 // إضافة المضلع إلى الخريطة
-                polygonLayer = L.polygon(coordinates, {
+                polygonLayer = L.polygon(latLngs, {
                   color: 'blue',
                   fillColor: '#3388ff',
                   fillOpacity: 0.5,
@@ -97,19 +102,6 @@
         });
       }
     });
-
-    // وظيفة لتحليل إحداثيات المضلع من تنسيق WKT (Well-known text)
-    function parsePolygon(wkt) {
-      var coordinates = wkt
-        .replace('POLYGON((', '')
-        .replace('))', '')
-        .split(',')
-        .map(function(coord) {
-          var latLng = coord.trim().split(' ');
-          return [parseFloat(latLng[1]), parseFloat(latLng[0])]; // تحويل الإحداثيات إلى [lat, lon]
-        });
-      return [coordinates]; // إرجاع مصفوفة من المصفوفات المطلوبة لـ Leaflet
-    }
   </script>
 
 </body>
