@@ -3,26 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leaflet Map with Custom Popup and Circle Range</title>
+  <title>Leaflet Map with Custom Popup and Polygons</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
   <style>
-    /* ملء الخريطة لنافذة المتصفح بالكامل */
+    /* تأكد من أن الخريطة تغطي النافذة بالكامل */
     html, body, #map {
       height: 100%;
       margin: 0;
       padding: 0;
     }
 
-    /* تصميم النافذة المنبثقة */
+    /* تحسين تصميم النافذة المنبثقة */
     .popup-name {
       font-weight: bold;
       font-size: 18px;
+      color: #000; /* لون النص الداكن لـ name */
     }
     .popup-des {
       font-size: 14px;
-      color: #555;
+      color: #555; /* لون النص الأخف لـ des */
     }
   </style>
 </head>
@@ -39,10 +40,10 @@
       maxZoom: 18,
     }).addTo(map);
 
-    // دائرة النطاق (سيتم تفعيلها عند نقطة معينة)
-    var rangeCircle;
+    // متغير للمضلعات التي تظهر عند اختيار نقطة بناءً على cul
+    var polygonLayer;
 
-    // رابط ملف CSV من Google Sheets
+    // رابط ملف Google Sheets بصيغة CSV
     var csvUrl = 'https://docs.google.com/spreadsheets/d/1YBmoRtfvT-F3fwTlZcx2JbQTRX1rhOd8ZPkjRrj-Vvc/pub?output=csv';
 
     // تحميل وتحليل بيانات CSV باستخدام PapaParse
@@ -63,32 +64,52 @@
                 <div class="popup-des">${row.des}</div>`
               );
 
-            // استماع إلى حدث الفتح للنافذة المنبثقة لتفعيل النطاق بناءً على cul
+            // استماع إلى حدث الفتح للنافذة المنبثقة لتفعيل المضلع بناءً على cul
             marker.on('popupopen', function() {
-              if (row.cul === 'قيمة معينة') { // استبدل 'قيمة معينة' بالقيمة المطلوبة
-                // إذا كانت هناك دائرة سابقة، أزلها
-                if (rangeCircle) {
-                  map.removeLayer(rangeCircle);
-                }
+              // إذا كانت هناك طبقة مضلع سابقة، أزلها
+              if (polygonLayer) {
+                map.removeLayer(polygonLayer);
+              }
+
+              // إذا كانت قيمة cul تحتوي على إحداثيات لمضلع
+              if (row.cul && row.cul.startsWith('POLYGON')) {
+                var coordinates = parsePolygon(row.cul);
                 
-                // إضافة دائرة النطاق حول النقطة الحالية
-                rangeCircle = L.circle([row.lat, row.lon], {
-                  color: 'red',
-                  radius: 50000 // نصف القطر بالمتر (50 كم هنا كمثال)
+                // إضافة المضلع إلى الخريطة
+                polygonLayer = L.polygon(coordinates, {
+                  color: 'blue',
+                  fillColor: '#3388ff',
+                  fillOpacity: 0.5,
                 }).addTo(map);
+
+                // تكبير الخريطة لاحتواء المضلع بالكامل
+                map.fitBounds(polygonLayer.getBounds());
               }
             });
 
-            // استماع إلى حدث غلق النافذة المنبثقة لإزالة النطاق
+            // استماع إلى حدث غلق النافذة المنبثقة لإزالة المضلع
             marker.on('popupclose', function() {
-              if (rangeCircle) {
-                map.removeLayer(rangeCircle);
+              if (polygonLayer) {
+                map.removeLayer(polygonLayer);
               }
             });
           }
         });
       }
     });
+
+    // وظيفة لتحليل إحداثيات المضلع من تنسيق WKT (Well-known text)
+    function parsePolygon(wkt) {
+      var coordinates = wkt
+        .replace('POLYGON((', '')
+        .replace('))', '')
+        .split(',')
+        .map(function(coord) {
+          var latLng = coord.trim().split(' ');
+          return [parseFloat(latLng[1]), parseFloat(latLng[0])]; // تحويل الإحداثيات إلى [lat, lon]
+        });
+      return [coordinates]; // إرجاع مصفوفة من المصفوفات المطلوبة لـ Leaflet
+    }
   </script>
 
 </body>
