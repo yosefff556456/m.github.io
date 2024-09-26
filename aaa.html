@@ -30,63 +30,54 @@
   <div id="map"></div>
 
   <script>
-    var map = L.map('map').setView([24.7136, 46.6753], 5); // التركيز على السعودية
+    // إنشاء خريطة
+    const map = L.map('map').setView([24.7136, 46.6753], 5);
 
-    // إضافة خريطة OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-    }).addTo(map);
+    // إضافة طبقة خريطة
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
 
-    var polygonLayer; // للمضلعات
-    var markers = {}; // لتخزين النقاط المتشاركة في نفس الموقع
+    const markers = {}; // تخزين النقاط
+    let polygonLayer; // لتخزين المضلع الحالي
 
     // رابط ملف CSV
-    var csvUrl = 'https://docs.google.com/spreadsheets/d/1YBmoRtfvT-F3fwTlZcx2JbQTRX1rhOd8ZPkjRrj-Vvc/pub?output=csv';
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/1YBmoRtfvT-F3fwTlZcx2JbQTRX1rhOd8ZPkjRrj-Vvc/pub?output=csv';
 
-    // تحميل وتحليل CSV
+    // تحميل البيانات من CSV
     Papa.parse(csvUrl, {
       download: true,
       header: true,
       dynamicTyping: true,
       complete: function(results) {
-        console.log(results.data);
-
-        // المرور على كل صف
-        results.data.forEach(function(row) {
+        results.data.forEach(row => {
           if (row.lat && row.lon) {
-            var latLonKey = `${row.lat},${row.lon}`; // مفتاح يجمع الإحداثيات
+            const latLonKey = `${row.lat},${row.lon}`; // مفتاح للإحداثيات
 
-            // إذا كانت هناك علامة في هذا الموقع بالفعل، أضف المحتوى إلى نفس popup
-            if (markers[latLonKey]) {
-              var existingPopupContent = markers[latLonKey].getPopup().getContent();
-              var newPopupContent = existingPopupContent + `<br><div class="popup-name">${row.name}</div><div class="popup-des">${row.des}</div>`;
-              markers[latLonKey].setPopupContent(newPopupContent);
-            } else {
-              // إنشاء علامة جديدة وإضافة popup
-              var marker = L.marker([row.lat, row.lon]).addTo(map)
+            // إضافة أو تحديث العلامة
+            if (!markers[latLonKey]) {
+              const marker = L.marker([row.lat, row.lon]).addTo(map)
                 .bindPopup(
                   `<div class="popup-name">${row.name}</div>
-                  <div class="popup-des">${row.des}</div>`
+                   <div class="popup-des">${row.des}</div>`
                 );
               
-              // حفظ العلامة في المصفوفة
-              markers[latLonKey] = marker;
+              markers[latLonKey] = marker; // حفظ العلامة في المصفوفة
+            } else {
+              // تحديث المحتوى إذا كانت النقطة موجودة
+              markers[latLonKey].setPopupContent(
+                markers[latLonKey].getPopup().getContent() + 
+                `<br><div class="popup-name">${row.name}</div><div class="popup-des">${row.des}</div>`
+              );
             }
 
-            // معالجة الـ `cul` إذا كانت تحتوي على إحداثيات مضلع
+            // معالجة الـ `cul` لرسم المضلع
             if (row.cul) {
               try {
-                var coordinates = JSON.parse(row.cul); // محاولة تحليل بيانات cul
+                const coordinates = JSON.parse(row.cul); // تحليل بيانات cul
+                const latLngs = coordinates.map(coord => [coord[1], coord[0]]); // تحويل (lat, lon) إلى (lon, lat)
 
-                // تحويل الإحداثيات
-                var latLngs = coordinates.map(function(coord) {
-                  return [coord[1], coord[0]]; // تحويل من (lat, lon) إلى (lon, lat)
-                });
-
-                // إضافة المضلع عند فتح الـ popup
                 marker.on('popupopen', function() {
                   if (polygonLayer) {
-                    map.removeLayer(polygonLayer);
+                    map.removeLayer(polygonLayer); // إزالة المضلع القديم
                   }
 
                   polygonLayer = L.polygon(latLngs, {
@@ -95,13 +86,12 @@
                     fillOpacity: 0.5,
                   }).addTo(map);
 
-                  map.fitBounds(polygonLayer.getBounds());
+                  map.fitBounds(polygonLayer.getBounds()); // ضبط عرض الخريطة ليتناسب مع المضلع
                 });
 
-                // إزالة المضلع عند غلق popup
                 marker.on('popupclose', function() {
                   if (polygonLayer) {
-                    map.removeLayer(polygonLayer);
+                    map.removeLayer(polygonLayer); // إزالة المضلع عند غلق popup
                   }
                 });
               } catch (error) {
