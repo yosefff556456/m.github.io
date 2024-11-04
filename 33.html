@@ -69,8 +69,8 @@
                 if (index === 0) return;
                 
                 const cols = row.split(',');
-                const lat = parseFloat(cols[0].replace('٫', '.')); // العمود الأول (خط العرض)
-                const lon = parseFloat(cols[1].replace('٫', '.')); // العمود الثاني (خط الطول)
+                const lat = parseFloat(cols[1].replace('٫', '.')); // العمود الأول (خط العرض)
+                const lon = parseFloat(cols[2].replace('٫', '.')); // العمود الثاني (خط الطول)
                 
                 if (!isNaN(lat) && !isNaN(lon)) {
                     heatData.push([lat, lon]);
