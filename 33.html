@@ -3,122 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خريطة حرارية للأسلاف</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <title>خريطة الأجداد</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        #map { height: 600px; width: 100%; }
-        .ancestor-label {
-            font-size: 14px;
-            font-weight: bold;
-            background-color: white;
-            padding: 5px;
-            border-radius: 5px;
-            border: 1px solid #333;
+        #map {
+            height: 600px;
+            width: 100%;
         }
     </style>
 </head>
 <body>
-    <h2>خريطة حرارية للأسلاف</h2>
     <div id="map"></div>
-
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        // إعداد الخريطة
-        var map = L.map('map').setView([15.38, 43.649], 6);
+        // رابط ملف CSV
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSlzuOHduE0dufp5Gy8G-3-WENhQRH5QbNrjAec-_kZyU9nhG3GpA04jMRtGiE3kg/pub?output=csv';
+
+        // إنشاء الخريطة
+        const map = L.map('map').setView([15.38, 43.649], 7);
+
+        // إضافة طبقة الخريطة
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
+            maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // تحميل بيانات CSV من Google Sheets
-        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSlzuOHduE0dufp5Gy8G-3-WENhQRH5QbNrjAec-_kZyU9nhG3GpA04jMRtGiE3kg/pub?output=csv')
-            .then(response => response.text())
-            .then(csv => {
-                const data = parseCSV(csv);
-                const ancestorTree = parseAncestors(data);
-                const averageCoordinates = calculateAverageCoordinates(ancestorTree);
-                displayAncestors(map, ancestorTree, averageCoordinates.lat, averageCoordinates.lng);
-            })
-            .catch(error => console.error('Error loading CSV:', error));
-
-        // تحويل CSV إلى كائنات
-        function parseCSV(csv) {
-            const lines = csv.split('\n').map(line => line.split(','));
-            const headers = lines[0];
-            const results = [];
-            for (let i = 1; i < lines.length; i++) {
-                const obj = {};
-                for (let j = 0; j < headers.length; j++) {
-                    obj[headers[j].trim()] = lines[i][j].trim();
-                }
-                results.push(obj);
-            }
-            return results;
+        // دالة لتحميل البيانات من CSV
+        async function loadCSV(url) {
+            const response = await fetch(url);
+            const data = await response.text();
+            return data.split('\n').map(row => row.split(','));
         }
 
-        // تحليل شجرة الأسلاف
-        function parseAncestors(data) {
-            const tree = {};
-            data.forEach(item => {
-                const ancestorList = item.Ancestors.split('>');
-                const lat = parseFloat(item.Latitude);
-                const lng = parseFloat(item.Longitude);
-                let currentLevel = tree;
+        // دالة لحساب المتوسطات
+        function averageCoordinates(data) {
+            const latSum = data.reduce((sum, entry) => sum + entry.latitude, 0);
+            const lngSum = data.reduce((sum, entry) => sum + entry.longitude, 0);
+            return {
+                latitude: latSum / data.length,
+                longitude: lngSum / data.length
+            };
+        }
 
-                // بناء شجرة الأسلاف باستخدام الإحداثيات
-                ancestorList.forEach(ancestor => {
-                    if (!currentLevel[ancestor]) {
-                        currentLevel[ancestor] = { children: {}, lat, lng };
-                    }
-                    currentLevel = currentLevel[ancestor].children;
+        // معالجة البيانات وعرضها
+        loadCSV(csvUrl).then(rows => {
+            const ancestorMap = new Map();
+
+            // تخطي الصف الأول (رؤوس الأعمدة)
+            rows.slice(1).forEach(row => {
+                const ancestor = row[0];
+                const latitude = parseFloat(row[1]);
+                const longitude = parseFloat(row[2]);
+
+                if (!ancestorMap.has(ancestor)) {
+                    ancestorMap.set(ancestor, []);
+                }
+                ancestorMap.get(ancestor).push({ latitude, longitude });
+            });
+
+            // رسم النقاط والمتوسطات
+            ancestorMap.forEach((coords, ancestor) => {
+                const avgCoords = averageCoordinates(coords);
+                L.marker([avgCoords.latitude, avgCoords.longitude]).addTo(map)
+                    .bindPopup(ancestor);
+
+                // رسم الخطوط
+                coords.forEach(({ latitude, longitude }) => {
+                    const latlngs = [
+                        [avgCoords.latitude, avgCoords.longitude],
+                        [latitude, longitude]
+                    ];
+                    L.polyline(latlngs, { color: 'blue' }).addTo(map);
                 });
             });
-            return tree;
-        }
-
-        // حساب متوسط الإحداثيات لكل السلف
-        function calculateAverageCoordinates(tree) {
-            const coordinates = [];
-
-            // استخراج الإحداثيات لكل مستوى من الأسلاف
-            for (const ancestor in tree) {
-                const { lat, lng } = tree[ancestor];
-                coordinates.push({ lat, lng });
-
-                // استخراج الإحداثيات من الأبناء أيضاً
-                if (Object.keys(tree[ancestor].children).length > 0) {
-                    const childCoords = calculateAverageCoordinates(tree[ancestor].children);
-                    coordinates.push(...childCoords);
-                }
-            }
-
-            // حساب متوسط الإحداثيات
-            const avgLat = coordinates.reduce((sum, coord) => sum + coord.lat, 0) / coordinates.length;
-            const avgLng = coordinates.reduce((sum, coord) => sum + coord.lng, 0) / coordinates.length;
-            return { lat: avgLat, lng: avgLng };
-        }
-
-        // عرض الأسلاف على الخريطة
-        function displayAncestors(map, tree, lat, lng, level = 0, parentMarker = null) {
-            for (const ancestor in tree) {
-                // إضافة السلف على الخريطة مع التسمية
-                const marker = L.marker([lat - (level * 0.02), lng + (level * 0.02)], {
-                    icon: L.divIcon({
-                        className: 'ancestor-label',
-                        html: ancestor,
-                        iconSize: [100, 30]
-                    })
-                }).addTo(map);
-
-                // توصيل السلف بالوالد إن وجد
-                if (parentMarker) {
-                    L.polyline([parentMarker.getLatLng(), marker.getLatLng()], { color: 'blue', weight: 2 }).addTo(map);
-                }
-
-                // عرض الأبناء
-                displayAncestors(map, tree[ancestor].children, lat, lng, level + 1, marker);
-            }
-        }
+        });
     </script>
 </body>
 </html>
+
