@@ -30,27 +30,18 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // قراءة البيانات من Google Sheets
+        // تحميل بيانات CSV من Google Sheets
         fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSlzuOHduE0dufp5Gy8G-3-WENhQRH5QbNrjAec-_kZyU9nhG3GpA04jMRtGiE3kg/pub?output=csv')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text();
-            })
+            .then(response => response.text())
             .then(csv => {
                 const data = parseCSV(csv);
-                console.log(data);  // تحقق من البيانات المحملة
                 const ancestorTree = parseAncestors(data);
                 const averageCoordinates = calculateAverageCoordinates(ancestorTree);
-                console.log('Average Coordinates:', averageCoordinates);  // تحقق من متوسط الإحداثيات
                 displayAncestors(map, ancestorTree, averageCoordinates.lat, averageCoordinates.lng);
             })
-            .catch(error => {
-                console.error('There was a problem with the fetch operation:', error);
-            });
+            .catch(error => console.error('Error loading CSV:', error));
 
-        // تحليل CSV
+        // تحويل CSV إلى كائنات
         function parseCSV(csv) {
             const lines = csv.split('\n').map(line => line.split(','));
             const headers = lines[0];
@@ -74,7 +65,7 @@
                 const lng = parseFloat(item.Longitude);
                 let currentLevel = tree;
 
-                // إضافة الإحداثيات إلى الشجرة
+                // بناء شجرة الأسلاف باستخدام الإحداثيات
                 ancestorList.forEach(ancestor => {
                     if (!currentLevel[ancestor]) {
                         currentLevel[ancestor] = { children: {}, lat, lng };
@@ -85,35 +76,32 @@
             return tree;
         }
 
-        // حساب متوسط الإحداثيات
+        // حساب متوسط الإحداثيات لكل السلف
         function calculateAverageCoordinates(tree) {
             const coordinates = [];
 
-            // استخرج الإحداثيات لكل سلف في الشجرة
+            // استخراج الإحداثيات لكل مستوى من الأسلاف
             for (const ancestor in tree) {
                 const { lat, lng } = tree[ancestor];
                 coordinates.push({ lat, lng });
 
-                // إذا كان هناك أطفال، استخرج إحداثياتهم أيضاً
+                // استخراج الإحداثيات من الأبناء أيضاً
                 if (Object.keys(tree[ancestor].children).length > 0) {
                     const childCoords = calculateAverageCoordinates(tree[ancestor].children);
                     coordinates.push(...childCoords);
                 }
             }
 
-            // احسب المتوسط إذا كانت الإحداثيات متاحة
-            if (coordinates.length === 0) return { lat: 0, lng: 0 };
-
+            // حساب متوسط الإحداثيات
             const avgLat = coordinates.reduce((sum, coord) => sum + coord.lat, 0) / coordinates.length;
             const avgLng = coordinates.reduce((sum, coord) => sum + coord.lng, 0) / coordinates.length;
-
             return { lat: avgLat, lng: avgLng };
         }
 
         // عرض الأسلاف على الخريطة
         function displayAncestors(map, tree, lat, lng, level = 0, parentMarker = null) {
             for (const ancestor in tree) {
-                // إضافة العلامة لكل سلف
+                // إضافة السلف على الخريطة مع التسمية
                 const marker = L.marker([lat - (level * 0.02), lng + (level * 0.02)], {
                     icon: L.divIcon({
                         className: 'ancestor-label',
@@ -122,12 +110,12 @@
                     })
                 }).addTo(map);
 
-                // ربط السلف بالوالد إذا كان موجوداً
+                // توصيل السلف بالوالد إن وجد
                 if (parentMarker) {
                     L.polyline([parentMarker.getLatLng(), marker.getLatLng()], { color: 'blue', weight: 2 }).addTo(map);
                 }
 
-                // تكرار للسلف التالي
+                // عرض الأبناء
                 displayAncestors(map, tree[ancestor].children, lat, lng, level + 1, marker);
             }
         }
