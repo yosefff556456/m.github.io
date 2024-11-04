@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>خريطة الأجداد</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-curve/dist/leaflet.curve.css" />
     <style>
         #map {
             height: 600px;
@@ -15,6 +16,8 @@
 <body>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-heat/dist/leaflet-heat.js"></script>
+    <script src="https://unpkg.com/leaflet-curve/dist/leaflet.curve.js"></script>
     <script>
         // رابط ملف CSV
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSlzuOHduE0dufp5Gy8G-3-WENhQRH5QbNrjAec-_kZyU9nhG3GpA04jMRtGiE3kg/pub?output=csv';
@@ -45,47 +48,48 @@
                 const latitude = parseFloat(row[1]);
                 const longitude = parseFloat(row[2]);
 
-                // أخذ آخر سلف كالسلف المباشر
-                const directAncestor = ancestors[ancestors.length - 1];
-                if (!ancestorMap.has(directAncestor)) {
-                    ancestorMap.set(directAncestor, { coords: [], lineage: ancestors });
+                // إضافة إحداثيات الحرارة
+                if (!ancestorMap.has(ancestors[ancestors.length - 1])) {
+                    ancestorMap.set(ancestors[ancestors.length - 1], { coords: [], lineage: ancestors });
                 }
-                ancestorMap.get(directAncestor).coords.push({ latitude, longitude });
+                ancestorMap.get(ancestors[ancestors.length - 1]).coords.push({ latitude, longitude });
             });
 
-            // رسم النقاط والمتوسطات
-            ancestorMap.forEach((data, ancestor) => {
-                const avgCoords = averageCoordinates(data.coords);
-                L.marker([avgCoords.latitude, avgCoords.longitude]).addTo(map)
-                    .bindPopup(ancestor);
-
-                // رسم الخطوط
-                data.lineage.forEach((ancestor, index) => {
-                    if (index < data.lineage.length - 1) { // تجاهل آخر عنصر لأنه السلف المباشر
-                        const parentAncestor = data.lineage[index + 1]; // السلف السابق
-                        const parentData = ancestorMap.get(parentAncestor);
-                        if (parentData) {
-                            const parentAvg = averageCoordinates(parentData.coords);
-                            const latlngs = [
-                                [avgCoords.latitude, avgCoords.longitude],
-                                [parentAvg.latitude, parentAvg.longitude]
-                            ];
-                            L.polyline(latlngs, { color: 'blue' }).addTo(map);
-                        }
-                    }
+            // إضافة نقاط الحرارة
+            const heatData = [];
+            ancestorMap.forEach(data => {
+                data.coords.forEach(coord => {
+                    heatData.push([coord.latitude, coord.longitude]);
                 });
             });
-        });
+            L.heatLayer(heatData, { radius: 25 }).addTo(map);
 
-        // دالة لحساب المتوسطات
-        function averageCoordinates(data) {
-            const latSum = data.reduce((sum, entry) => sum + entry.latitude, 0);
-            const lngSum = data.reduce((sum, entry) => sum + entry.longitude, 0);
-            return {
-                latitude: latSum / data.length,
-                longitude: lngSum / data.length
-            };
-        }
+            // رسم الخطوط المنحنية بين الأجداد
+            ancestorMap.forEach((data, ancestor) => {
+                const coords = data.coords;
+                const lastAncestor = data.lineage[data.lineage.length - 1];
+
+                for (let i = 0; i < data.lineage.length - 1; i++) {
+                    const currentAncestor = data.lineage[i];
+                    const nextAncestor = data.lineage[i + 1];
+                    if (ancestorMap.has(nextAncestor)) {
+                        const parentData = ancestorMap.get(nextAncestor);
+                        const parentCoords = parentData.coords;
+
+                        // حساب النقاط المتوسطة لرسم الخط المنحني
+                        parentCoords.forEach(parentCoord => {
+                            const latlngs = [
+                                [coords[0].latitude, coords[0].longitude],
+                                [parentCoord.latitude, parentCoord.longitude]
+                            ];
+
+                            // رسم الخط المنحني
+                            L.curve(L.curve('M', latlngs, { color: 'blue', opacity: 0.5, fill: false })).addTo(map);
+                        });
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>
