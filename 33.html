@@ -64,7 +64,7 @@
             });
             L.heatLayer(heatData, { radius: 25 }).addTo(map);
 
-            // رسم الخطوط المنحنية بين الأجداد
+            // رسم الأقواس بين الأجداد
             ancestorMap.forEach((data, ancestor) => {
                 const coords = data.coords;
                 const lastAncestor = data.lineage[data.lineage.length - 1];
@@ -76,15 +76,16 @@
                         const parentData = ancestorMap.get(nextAncestor);
                         const parentCoords = parentData.coords;
 
-                        // حساب النقاط المتوسطة لرسم الخط المنحني
+                        // رسم القوس الحاد بين الأجداد
                         parentCoords.forEach(parentCoord => {
                             const latlngs = [
                                 [coords[0].latitude, coords[0].longitude],
+                                [(coords[0].latitude + parentCoord.latitude) / 2, (coords[0].longitude + parentCoord.longitude) / 2 + 0.1], // نقطة ارتفاع للقوس
                                 [parentCoord.latitude, parentCoord.longitude]
                             ];
 
-                            // رسم الخط المنحني
-                            L.curve(L.curve('M', latlngs, { color: 'blue', opacity: 0.5, fill: false })).addTo(map);
+                            // رسم القوس
+                            L.curve(['M', latlngs[0], 'Q', latlngs[1], latlngs[2]], { color: 'blue', opacity: 0.5, fill: false }).addTo(map);
                         });
                     }
                 }
