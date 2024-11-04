@@ -1,96 +1,104 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خريطة الأجداد</title>
+    <title>Heatmap with Leaflet</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-curve/dist/leaflet.curve.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-heat/dist/leaflet-heat.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+        }
         #map {
-            height: 600px;
+            height: 100%;
             width: 100%;
+        }
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-heat/dist/leaflet-heat.js"></script>
-    <script src="https://unpkg.com/leaflet-curve/dist/leaflet.curve.js"></script>
-    <script>
-        // رابط ملف CSV
-        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSlzuOHduE0dufp5Gy8G-3-WENhQRH5QbNrjAec-_kZyU9nhG3GpA04jMRtGiE3kg/pub?output=csv';
 
-        // إنشاء الخريطة
-        const map = L.map('map').setView([15.38, 43.649], 7);
+<div id="map"></div>
+<div class="controls">
+    <label for="radius">Radius:</label>
+    <input type="range" id="radius" min="1" max="50" value="25" step="1" />
+    <span id="radiusValue">25</span>
+    <br />
+    <label for="blur">Blur:</label>
+    <input type="range" id="blur" min="0" max="50" value="15" step="1" />
+    <span id="blurValue">15</span>
+    <br />
+    <label for="max">Max:</label>
+    <input type="range" id="max" min="1" max="100" value="100" step="1" />
+    <span id="maxValue">100</span>
+</div>
 
-        // إضافة طبقة الخريطة
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+<script>
+    // إعداد الخريطة
+    var map = L.map('map').setView([23.8859, 45.0792], 6); // مركز الخريطة (السعودية)
 
-        // دالة لتحميل البيانات من CSV
-        async function loadCSV(url) {
-            const response = await fetch(url);
-            const data = await response.text();
-            return data.split('\n').map(row => row.split(','));
-        }
+    // إضافة طبقة منخرطة للخرائط
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-        // معالجة البيانات وعرضها
-        loadCSV(csvUrl).then(rows => {
-            const ancestorMap = new Map();
+    // إعداد بيانات الحرارة
+    var heatData = [];
 
-            // تخطي الصف الأول (رؤوس الأعمدة)
-            rows.slice(1).forEach(row => {
-                const ancestors = row[0].split('>'); // تقسيم السلسلة إلى أجداد
-                const latitude = parseFloat(row[1]);
-                const longitude = parseFloat(row[2]);
-
-                // إضافة إحداثيات الحرارة
-                if (!ancestorMap.has(ancestors[ancestors.length - 1])) {
-                    ancestorMap.set(ancestors[ancestors.length - 1], { coords: [], lineage: ancestors });
-                }
-                ancestorMap.get(ancestors[ancestors.length - 1]).coords.push({ latitude, longitude });
-            });
-
-            // إضافة نقاط الحرارة
-            const heatData = [];
-            ancestorMap.forEach(data => {
-                data.coords.forEach(coord => {
-                    heatData.push([coord.latitude, coord.longitude]);
-                });
-            });
-            L.heatLayer(heatData, { radius: 25 }).addTo(map);
-
-            // رسم الأقواس بين الأجداد
-            ancestorMap.forEach((data, ancestor) => {
-                const coords = data.coords;
-                const lastAncestor = data.lineage[data.lineage.length - 1];
-
-                for (let i = 0; i < data.lineage.length - 1; i++) {
-                    const currentAncestor = data.lineage[i];
-                    const nextAncestor = data.lineage[i + 1];
-                    if (ancestorMap.has(nextAncestor)) {
-                        const parentData = ancestorMap.get(nextAncestor);
-                        const parentCoords = parentData.coords;
-
-                        // رسم القوس الحاد بين الأجداد
-                        parentCoords.forEach(parentCoord => {
-                            const latlngs = [
-                                [coords[0].latitude, coords[0].longitude],
-                                [(coords[0].latitude + parentCoord.latitude) / 2, (coords[0].longitude + parentCoord.longitude) / 2 + 0.1], // نقطة ارتفاع للقوس
-                                [parentCoord.latitude, parentCoord.longitude]
-                            ];
-
-                            // رسم القوس
-                            L.curve(['M', latlngs[0], 'Q', latlngs[1], latlngs[2]], { color: 'blue', opacity: 0.5, fill: false }).addTo(map);
-                        });
-                    }
+    // تحميل البيانات من ملف CSV
+    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSlzuOHduE0dufp5Gy8G-3-WENhQRH5QbNrjAec-_kZyU9nhG3GpA04jMRtGiE3kg/pub?output=csv')
+        .then(response => response.text())
+        .then(data => {
+            const rows = data.split('\n');
+            rows.forEach(row => {
+                const cols = row.split(',');
+                const lat = parseFloat(cols[1]); // العمود الثاني (خط العرض)
+                const lon = parseFloat(cols[2]); // العمود الثالث (خط الطول)
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    heatData.push([lat, lon]);
                 }
             });
-        });
-    </script>
+
+            // إضافة بيانات الحرارة إلى الخريطة
+            var heatLayer = L.heatLayer(heatData, {
+                radius: parseInt(document.getElementById('radius').value),
+                blur: parseInt(document.getElementById('blur').value),
+                max: parseInt(document.getElementById('max').value)
+            }).addTo(map);
+
+            // تحديث إعدادات الحرارة عند تغيير القيم
+            document.getElementById('radius').addEventListener('input', function() {
+                heatLayer.setOptions({ radius: parseInt(this.value) });
+                document.getElementById('radiusValue').innerText = this.value;
+            });
+
+            document.getElementById('blur').addEventListener('input', function() {
+                heatLayer.setOptions({ blur: parseInt(this.value) });
+                document.getElementById('blurValue').innerText = this.value;
+            });
+
+            document.getElementById('max').addEventListener('input', function() {
+                heatLayer.setOptions({ max: parseInt(this.value) });
+                document.getElementById('maxValue').innerText = this.value;
+            });
+        })
+        .catch(error => console.error('Error loading the CSV data: ', error));
+</script>
+
 </body>
 </html>
