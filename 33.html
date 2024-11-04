@@ -35,6 +35,48 @@
             return data.split('\n').map(row => row.split(','));
         }
 
+        // معالجة البيانات وعرضها
+        loadCSV(csvUrl).then(rows => {
+            const ancestorMap = new Map();
+
+            // تخطي الصف الأول (رؤوس الأعمدة)
+            rows.slice(1).forEach(row => {
+                const ancestors = row[0].split('>'); // تقسيم السلسلة إلى أجداد
+                const latitude = parseFloat(row[1]);
+                const longitude = parseFloat(row[2]);
+
+                // أخذ آخر سلف كالسلف المباشر
+                const directAncestor = ancestors[ancestors.length - 1];
+                if (!ancestorMap.has(directAncestor)) {
+                    ancestorMap.set(directAncestor, { coords: [], lineage: ancestors });
+                }
+                ancestorMap.get(directAncestor).coords.push({ latitude, longitude });
+            });
+
+            // رسم النقاط والمتوسطات
+            ancestorMap.forEach((data, ancestor) => {
+                const avgCoords = averageCoordinates(data.coords);
+                L.marker([avgCoords.latitude, avgCoords.longitude]).addTo(map)
+                    .bindPopup(ancestor);
+
+                // رسم الخطوط
+                data.lineage.forEach((ancestor, index) => {
+                    if (index < data.lineage.length - 1) { // تجاهل آخر عنصر لأنه السلف المباشر
+                        const parentAncestor = data.lineage[index + 1]; // السلف السابق
+                        const parentData = ancestorMap.get(parentAncestor);
+                        if (parentData) {
+                            const parentAvg = averageCoordinates(parentData.coords);
+                            const latlngs = [
+                                [avgCoords.latitude, avgCoords.longitude],
+                                [parentAvg.latitude, parentAvg.longitude]
+                            ];
+                            L.polyline(latlngs, { color: 'blue' }).addTo(map);
+                        }
+                    }
+                });
+            });
+        });
+
         // دالة لحساب المتوسطات
         function averageCoordinates(data) {
             const latSum = data.reduce((sum, entry) => sum + entry.latitude, 0);
@@ -44,40 +86,6 @@
                 longitude: lngSum / data.length
             };
         }
-
-        // معالجة البيانات وعرضها
-        loadCSV(csvUrl).then(rows => {
-            const ancestorMap = new Map();
-
-            // تخطي الصف الأول (رؤوس الأعمدة)
-            rows.slice(1).forEach(row => {
-                const ancestor = row[0];
-                const latitude = parseFloat(row[1]);
-                const longitude = parseFloat(row[2]);
-
-                if (!ancestorMap.has(ancestor)) {
-                    ancestorMap.set(ancestor, []);
-                }
-                ancestorMap.get(ancestor).push({ latitude, longitude });
-            });
-
-            // رسم النقاط والمتوسطات
-            ancestorMap.forEach((coords, ancestor) => {
-                const avgCoords = averageCoordinates(coords);
-                L.marker([avgCoords.latitude, avgCoords.longitude]).addTo(map)
-                    .bindPopup(ancestor);
-
-                // رسم الخطوط
-                coords.forEach(({ latitude, longitude }) => {
-                    const latlngs = [
-                        [avgCoords.latitude, avgCoords.longitude],
-                        [latitude, longitude]
-                    ];
-                    L.polyline(latlngs, { color: 'blue' }).addTo(map);
-                });
-            });
-        });
     </script>
 </body>
 </html>
-
