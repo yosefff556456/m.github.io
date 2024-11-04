@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-heat/dist/leaflet-heat.js"></script>
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <style>
         body {
             margin: 0;
@@ -65,10 +64,14 @@
         .then(response => response.text())
         .then(data => {
             const rows = data.split('\n');
-            rows.forEach(row => {
+            rows.forEach((row, index) => {
+                // تخطي السطر الأول (رؤوس الأعمدة)
+                if (index === 0) return;
+                
                 const cols = row.split(',');
-                const lat = parseFloat(cols[1]); // العمود الثاني (خط العرض)
-                const lon = parseFloat(cols[2]); // العمود الثالث (خط الطول)
+                const lat = parseFloat(cols[0].replace('٫', '.')); // العمود الأول (خط العرض)
+                const lon = parseFloat(cols[1].replace('٫', '.')); // العمود الثاني (خط الطول)
+                
                 if (!isNaN(lat) && !isNaN(lon)) {
                     heatData.push([lat, lon]);
                 }
@@ -102,3 +105,4 @@
 
 </body>
 </html>
+
