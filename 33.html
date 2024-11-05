@@ -1,108 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Heatmap with Leaflet</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-heat/dist/leaflet-heat.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-        }
-        #map {
-            height: 100%;
-            width: 100%;
-        }
-        .controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 1000;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>خريطة مواقع نوع من iNaturalist</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; }
+  </style>
 </head>
 <body>
+  <div id="map"></div>
 
-<div id="map"></div>
-<div class="controls">
-    <label for="radius">Radius:</label>
-    <input type="range" id="radius" min="1" max="50" value="25" step="1" />
-    <span id="radiusValue">25</span>
-    <br />
-    <label for="blur">Blur:</label>
-    <input type="range" id="blur" min="0" max="50" value="15" step="1" />
-    <span id="blurValue">15</span>
-    <br />
-    <label for="max">Max:</label>
-    <input type="range" id="max" min="1" max="100" value="100" step="1" />
-    <span id="maxValue">100</span>
-</div>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script>
+    // إعداد خريطة Leaflet
+    const map = L.map('map').setView([23.8859, 45.0792], 6); // التركيز على السعودية
 
-<script>
-    // إعداد الخريطة
-    var map = L.map('map').setView([23.8859, 45.0792], 6); // مركز الخريطة (السعودية)
-
-    // إضافة طبقة منخرطة للخرائط
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '© OpenStreetMap'
+      maxZoom: 18,
+      attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // إعداد بيانات الحرارة
-    var heatData = [];
+    // دالة لجلب بيانات النوع من iNaturalist
+    async function fetchSpeciesData(taxonId) {
+      const url = `https://api.inaturalist.org/v1/observations?taxon_id=${taxonId}&per_page=100`;
+      const response = await fetch(url);
+      const data = await response.json();
+      return data.results;
+    }
 
-    // تحميل البيانات من ملف CSV
-    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSlzuOHduE0dufp5Gy8G-3-WENhQRH5QbNrjAec-_kZyU9nhG3GpA04jMRtGiE3kg/pub?output=csv')
-        .then(response => response.text())
-        .then(data => {
-            const rows = data.split('\n');
-            rows.forEach((row, index) => {
-                // تخطي السطر الأول (رؤوس الأعمدة)
-                if (index === 0) return;
-                
-                const cols = row.split(',');
-                const lat = parseFloat(cols[1].replace('٫', '.')); // العمود الأول (خط العرض)
-                const lon = parseFloat(cols[2].replace('٫', '.')); // العمود الثاني (خط الطول)
-                
-                if (!isNaN(lat) && !isNaN(lon)) {
-                    heatData.push([lat, lon]);
-                }
-            });
+    // دالة لإضافة البيانات إلى الخريطة
+    function addMarkersToMap(observations) {
+      observations.forEach(obs => {
+        if (obs.geojson) {
+          const lat = obs.geojson.coordinates[1];
+          const lng = obs.geojson.coordinates[0];
+          L.marker([lat, lng]).addTo(map)
+            .bindPopup(`<strong>${obs.species_guess}</strong><br>التاريخ: ${obs.observed_on}`);
+        }
+      });
+    }
 
-            // إضافة بيانات الحرارة إلى الخريطة
-            var heatLayer = L.heatLayer(heatData, {
-                radius: parseInt(document.getElementById('radius').value),
-                blur: parseInt(document.getElementById('blur').value),
-                max: parseInt(document.getElementById('max').value)
-            }).addTo(map);
-
-            // تحديث إعدادات الحرارة عند تغيير القيم
-            document.getElementById('radius').addEventListener('input', function() {
-                heatLayer.setOptions({ radius: parseInt(this.value) });
-                document.getElementById('radiusValue').innerText = this.value;
-            });
-
-            document.getElementById('blur').addEventListener('input', function() {
-                heatLayer.setOptions({ blur: parseInt(this.value) });
-                document.getElementById('blurValue').innerText = this.value;
-            });
-
-            document.getElementById('max').addEventListener('input', function() {
-                heatLayer.setOptions({ max: parseInt(this.value) });
-                document.getElementById('maxValue').innerText = this.value;
-            });
-        })
-        .catch(error => console.error('Error loading the CSV data: ', error));
-</script>
-
+    // استدعاء الدوال لتحميل وعرض البيانات
+    (async function() {
+      const taxonId = 319384; // معرف النوع المطلوب من iNaturalist
+      const observations = await fetchSpeciesData(taxonId);
+      addMarkersToMap(observations);
+    })();
+  </script>
 </body>
 </html>
-
