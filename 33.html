@@ -18,15 +18,20 @@
       text-align: center;
     }
     .custom-marker i {
-      font-size: 32px;
+      font-size: 2em; /* استخدام وحدات نسبية لتناسب جميع الشاشات */
       color: #f00; /* يمكنك تغيير اللون حسب الرغبة */
     }
     .custom-marker span {
       display: block;
       margin-top: 4px;
-      font-size: 14px;
-      color: #000;
+      font-size: 1em; /* استخدام وحدات نسبية */
+      color: #fff; /* لون الخط أبيض */
       font-weight: bold;
+      text-shadow:
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000; /* حدود سوداء حول النص */
     }
   </style>
 </head>
@@ -109,7 +114,7 @@
               var customIcon = L.divIcon({
                 html: iconHtml,
                 className: '',
-                iconSize: [32, 48], // يمكن تعديل الحجم حسب الحاجة
+                iconSize: null, // السماح للأيقونة بتحديد حجمها تلقائياً
                 iconAnchor: [16, 48] // ضبط نقطة التثبيت
               });
 
