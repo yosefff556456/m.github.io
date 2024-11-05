@@ -21,21 +21,21 @@
   <!-- تضمين Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // تحديد حدود جزيرة العرب
+    // تحديد حدود جزيرة العرب مع تمديدها قليلاً نحو الغرب والشمال
     var arabianBounds = L.latLngBounds(
-      [12.0, 34.0], // الزاوية الجنوبية الغربية (خط العرض، خط الطول)
-      [32.0, 60.0]  // الزاوية الشمالية الشرقية
+      [10.0, 30.0], // الزاوية الجنوبية الغربية (خط العرض، خط الطول) - تم التمديد جنوباً وغرباً
+      [35.0, 65.0]  // الزاوية الشمالية الشرقية - تم التمديد شمالاً وشرقاً
     );
 
     // تهيئة الخريطة وتحديد الموقع والزووم الافتراضي
     var map = L.map('map', {
       center: arabianBounds.getCenter(),
-      zoom: 6,
-      minZoom: 5, // الحد الأدنى للتكبير
+      zoom: 5,
+      minZoom: 4, // الحد الأدنى للتكبير
       maxZoom: 10, // الحد الأقصى للتكبير
       maxBounds: arabianBounds,
       maxBoundsViscosity: 1.0,
-      zoomControl: true, // إظهار عناصر التحكم في التكبير/التصغير
+      zoomControl: true,
       attributionControl: false
     });
 
@@ -44,11 +44,11 @@
       attribution: '',
       bounds: arabianBounds,
       noWrap: true,
-      minZoom: 5, // الحد الأدنى للتكبير
-      maxZoom: 10 // الحد الأقصى للتكبير
+      minZoom: 4,
+      maxZoom: 10
     }).addTo(map);
 
-    // منع تحميل البلاطات خارج الحدود
+    // منع تحميل البلاطات خارج الحدود المحددة
     Esri_WorldImagery.on('tileloadstart', function(event) {
       var tile = event.tile;
       var tileSize = this.getTileSize();
@@ -60,7 +60,7 @@
       }
     });
 
-    // إزالة إمكانية السحب خارج الحدود
+    // ضبط حدود الخريطة لتكون الحدود الجديدة الممتدة
     map.setMaxBounds(arabianBounds);
 
     // خيار إضافي: تغيير موضع عناصر التحكم في التكبير/التصغير
