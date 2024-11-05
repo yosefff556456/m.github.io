@@ -25,7 +25,7 @@
     }
     .custom-marker span {
       display: block;
-      margin-top: 4px;
+      margin-top: 2px;
       color: #fff;
       font-weight: bold;
       text-shadow:
@@ -55,7 +55,7 @@
     // تهيئة الخريطة وتحديد الموقع والزووم الافتراضي
     var map = L.map('map', {
       center: arabianBounds.getCenter(),
-      zoom: 5,
+      zoom: 4,
       minZoom: 4, // الحد الأدنى للتكبير
       maxZoom: 10, // الحد الأقصى للتكبير
       maxBounds: arabianBounds,
@@ -96,27 +96,32 @@
 
     // وظيفة لحساب حجم الأيقونة والنص بناءً على مستوى التكبير
     function getMarkerSize(zoom) {
-      var baseZoom = 4; // مستوى التكبير الأساسي
-      var scaleFactor = Math.pow(2, zoom - baseZoom);
+      var minZoom = map.getMinZoom();
+      var maxZoom = map.getMaxZoom();
+      var zoomRange = maxZoom - minZoom;
 
-      var baseIconSize = 20; // الحجم الأساسي للأيقونة عند مستوى التكبير الأساسي
-      var baseFontSize = 12; // الحجم الأساسي للخط عند مستوى التكبير الأساسي
+      var baseIconSize = 10; // الحجم الأساسي للأيقونة عند أدنى مستوى للتكبير
+      var baseFontSize = 8;  // الحجم الأساسي للخط عند أدنى مستوى للتكبير
 
-      var iconSize = baseIconSize * scaleFactor;
-      var fontSize = baseFontSize * scaleFactor;
+      var maxIconSize = 50;  // الحد الأقصى لحجم الأيقونة عند أقصى مستوى للتكبير
+      var maxFontSize = 16;  // الحد الأقصى لحجم الخط عند أقصى مستوى للتكبير
 
-      var maxIconSize = 100; // الحد الأقصى لحجم الأيقونة
-      var maxFontSize = 30; // الحد الأقصى لحجم الخط
+      var zoomFactor = (zoom - minZoom) / zoomRange; // قيمة بين 0 و 1
+
+      var iconSize = baseIconSize + (maxIconSize - baseIconSize) * zoomFactor;
+      var fontSize = baseFontSize + (maxFontSize - baseFontSize) * zoomFactor;
 
       return {
-        iconSize: iconSize > maxIconSize ? maxIconSize : iconSize,
-        fontSize: fontSize > maxFontSize ? maxFontSize : fontSize
+        iconSize: iconSize,
+        fontSize: fontSize
       };
     }
 
     // وظيفة لإنشاء أو تحديث الأيقونة المخصصة
     function createCustomIcon(name, sizes) {
-      var iconHtml = '<div class="custom-marker" style="font-size: ' + sizes.fontSize + 'px; width: ' + sizes.iconSize + 'px; height: ' + (sizes.iconSize + sizes.fontSize + 4) + 'px;">' +
+      var totalHeight = sizes.iconSize + sizes.fontSize + 4; // 4px للمسافة بين الصورة والنص
+
+      var iconHtml = '<div class="custom-marker" style="font-size: ' + sizes.fontSize + 'px; width: ' + sizes.iconSize + 'px; height: ' + totalHeight + 'px;">' +
                       '<img src="battle.png" alt="معركة">' +
                       '<span style="font-size: ' + sizes.fontSize + 'px;">' + name + '</span>' +
                      '</div>';
@@ -124,8 +129,8 @@
       var customIcon = L.divIcon({
         html: iconHtml,
         className: '',
-        iconSize: [sizes.iconSize, sizes.iconSize + sizes.fontSize + 4],
-        iconAnchor: [sizes.iconSize / 2, sizes.iconSize + sizes.fontSize + 4],
+        iconSize: [sizes.iconSize, totalHeight],
+        iconAnchor: [sizes.iconSize / 2, totalHeight],
       });
 
       return customIcon;
