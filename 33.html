@@ -14,24 +14,26 @@
     }
     .custom-marker {
       text-align: center;
+      transition: transform 0.1s ease, font-size 0.1s ease;
+      will-change: transform, font-size;
     }
     .custom-marker img {
       display: block;
       margin: 0 auto;
-      width: 40px; /* حجم ثابت لصورة الأيقونة */
-      height: 40px; /* حجم ثابت لصورة الأيقونة */
+      width: 100%; /* سيتم التحكم في الحجم عبر CSS */
+      height: auto;
     }
     .custom-marker span {
       display: block;
       margin-top: 2px;
       color: #fff;
       font-weight: bold;
-      font-size: 14px; /* حجم ثابت للنص */
       text-shadow:
         -1px -1px 0 #000,
         1px -1px 0 #000,
         -1px 1px 0 #000,
         1px 1px 0 #000;
+      transition: font-size 0.1s ease;
     }
   </style>
 </head>
@@ -89,21 +91,46 @@
     // خيار إضافي: تغيير موضع عناصر التحكم في التكبير/التصغير
     map.zoomControl.setPosition('topright');
 
-    // مصفوفة لتخزين العلامات
+    // مصفوفة لتخزين العلامات لتحديثها عند تغيير مستوى التكبير
     var markers = [];
 
-    // وظيفة لإنشاء الأيقونة المخصصة
-    function createCustomIcon(name) {
-      var iconHtml = '<div class="custom-marker">' +
-                      '<img src="battle.png" alt="معركة">' +
-                      '<span>' + name + '</span>' +
+    // وظيفة لحساب حجم الأيقونة والنص بناءً على مستوى التكبير
+    function getMarkerSize(zoom) {
+      var minZoom = map.getMinZoom();
+      var maxZoom = map.getMaxZoom();
+      var zoomRange = maxZoom - minZoom;
+
+      var baseIconSize = 32; // الحجم الأساسي للأيقونة عند أدنى مستوى للتكبير
+      var baseFontSize = 14;  // الحجم الأساسي للخط عند أدنى مستوى للتكبير
+
+      var maxIconSize = 64;  // الحد الأقصى لحجم الأيقونة عند أقصى مستوى للتكبير
+      var maxFontSize = 24;  // الحد الأقصى لحجم الخط عند أقصى مستوى للتكبير
+
+      var zoomFactor = (zoom - minZoom) / zoomRange; // قيمة بين 0 و 1
+
+      var iconSize = baseIconSize + (maxIconSize - baseIconSize) * zoomFactor;
+      var fontSize = baseFontSize + (maxFontSize - baseFontSize) * zoomFactor;
+
+      return {
+        iconSize: iconSize,
+        fontSize: fontSize
+      };
+    }
+
+    // وظيفة لإنشاء أو تحديث الأيقونة المخصصة
+    function createCustomIcon(name, sizes) {
+      var totalHeight = sizes.iconSize + sizes.fontSize + 4; // 4px للمسافة بين الصورة والنص
+
+      var iconHtml = '<div class="custom-marker" style="width: ' + sizes.iconSize + 'px; height: ' + totalHeight + 'px;">' +
+                      '<img src="battle.png" alt="معركة" style="width: ' + sizes.iconSize + 'px; height: ' + sizes.iconSize + 'px;">' +
+                      '<span style="font-size: ' + sizes.fontSize + 'px;">' + name + '</span>' +
                      '</div>';
 
       var customIcon = L.divIcon({
         html: iconHtml,
         className: '',
-        iconSize: null,
-        iconAnchor: [16, 32 + 14 + 4], // 16 هو نصف عرض الأيقونة، 32 ارتفاع الأيقونة، 14 حجم الخط، 4 مسافة
+        iconSize: [sizes.iconSize, totalHeight],
+        iconAnchor: [sizes.iconSize / 2, totalHeight],
       });
 
       return customIcon;
@@ -118,6 +145,8 @@
         header: true,
         complete: function(results) {
           var data = results.data;
+          var zoom = map.getZoom();
+          var sizes = getMarkerSize(zoom);
 
           data.forEach(function(item) {
             var lat = parseFloat(item.Latitude);
@@ -125,7 +154,7 @@
             var name = item.Name;
 
             if (!isNaN(lat) && !isNaN(lng)) {
-              var customIcon = createCustomIcon(name);
+              var customIcon = createCustomIcon(name, sizes);
 
               // إضافة العلامة إلى الخريطة وتخزينها في المصفوفة
               var marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
@@ -141,6 +170,18 @@
 
     // استدعاء الوظيفة لتحميل البيانات
     loadCSVData();
+
+    // تحديث حجم الأيقونات والنص عند تغيير مستوى التكبير
+    map.on('zoomend', function() {
+      var zoom = map.getZoom();
+      var sizes = getMarkerSize(zoom);
+
+      markers.forEach(function(item) {
+        var name = item.data.Name;
+        var customIcon = createCustomIcon(name, sizes);
+        item.marker.setIcon(customIcon);
+      });
+    });
 
   </script>
 </body>
