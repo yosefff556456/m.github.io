@@ -31,9 +31,11 @@
     var map = L.map('map', {
       center: arabianBounds.getCenter(),
       zoom: 6,
+      minZoom: 5, // الحد الأدنى للتكبير
+      maxZoom: 10, // الحد الأقصى للتكبير
       maxBounds: arabianBounds,
       maxBoundsViscosity: 1.0,
-      zoomControl: false,
+      zoomControl: true, // إظهار عناصر التحكم في التكبير/التصغير
       attributionControl: false
     });
 
@@ -41,7 +43,9 @@
     var Esri_WorldImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: '',
       bounds: arabianBounds,
-      noWrap: true
+      noWrap: true,
+      minZoom: 5, // الحد الأدنى للتكبير
+      maxZoom: 10 // الحد الأقصى للتكبير
     }).addTo(map);
 
     // منع تحميل البلاطات خارج الحدود
@@ -58,6 +62,18 @@
 
     // إزالة إمكانية السحب خارج الحدود
     map.setMaxBounds(arabianBounds);
+
+    // خيار إضافي: تغيير موضع عناصر التحكم في التكبير/التصغير
+    map.zoomControl.setPosition('topright');
+
+    // خيار إضافي: رسالة تنبيه عند الوصول إلى حدود التكبير/التصغير
+    map.on('zoomend', function() {
+      if (map.getZoom() === map.getMaxZoom()) {
+        console.log('لقد وصلت إلى أقصى مستوى للتكبير.');
+      } else if (map.getZoom() === map.getMinZoom()) {
+        console.log('لقد وصلت إلى أدنى مستوى للتصغير.');
+      }
+    });
 
   </script>
 </body>
