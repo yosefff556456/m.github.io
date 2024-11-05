@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- تضمين Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- تضمين Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pg+Y7N0I4/0XxYpR1I3k1/uJbtCjYzHdIw5rXB8fYq/8M7jJ6HX/XY6Y7SLiyYHjdQ8sxclHQS55jFN/R6k1xg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
     html, body, #map {
       height: 100%;
@@ -15,9 +17,9 @@
     .custom-marker {
       text-align: center;
     }
-    .custom-marker img {
-      display: block;
-      margin: 0 auto;
+    .custom-marker i {
+      font-size: 32px;
+      color: #f00; /* يمكنك تغيير اللون حسب الرغبة */
     }
     .custom-marker span {
       display: block;
@@ -82,14 +84,6 @@
     // خيار إضافي: تغيير موضع عناصر التحكم في التكبير/التصغير
     map.zoomControl.setPosition('topright');
 
-    // إنشاء أيقونة مخصصة
-    var battleIcon = L.icon({
-      iconUrl: 'swords.png', // تأكد من أن الصورة 'swords.png' موجودة في نفس مسار الملف
-      iconSize: [32, 32], // حجم الأيقونة (يمكنك تعديله)
-      iconAnchor: [16, 32], // نقطة تثبيت الأيقونة
-      popupAnchor: [0, -32] // موقع النافذة المنبثقة بالنسبة للأيقونة
-    });
-
     // وظيفة لتحميل بيانات CSV وإضافة النقاط إلى الخريطة
     function loadCSVData() {
       var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNx5cQzCbAG4rUIQFsvnlVozC4jsofepc4hG1BQxyoUYaYZtQtXip8nMEoDP95cTMAJ5xtOwi-4qgU/pub?output=csv';
@@ -105,9 +99,9 @@
             var name = item.Name;
 
             if (!isNaN(lat) && !isNaN(lng)) {
-              // إنشاء محتوى HTML للأيقونة المخصصة
+              // إنشاء محتوى HTML للأيقونة المخصصة باستخدام Font Awesome
               var iconHtml = '<div class="custom-marker">' +
-                              '<img src="swords.png" alt="سيفين" width="32" height="32">' +
+                              '<i class="fas fa-crossed-swords"></i>' +
                               '<span>' + name + '</span>' +
                              '</div>';
 
