@@ -32,7 +32,7 @@
         -1px -1px 0 #000,
         1px -1px 0 #000,
         -1px 1px 0 #000,
-        1px 1px 0 #000;
+        1px 1px 0 #000; /* حدود سوداء حول النص */
       transition: font-size 0.1s ease; /* إضافة تأثيرات انتقالية للنص */
     }
   </style>
@@ -96,10 +96,16 @@
 
     // وظيفة لحساب حجم الأيقونة والنص بناءً على مستوى التكبير
     function getMarkerSize(zoom) {
-      var scale = Math.pow(1.5, zoom - 4); // تعديل عامل التكبير لجعل التغيير أكثر سلاسة
-      var iconSize = 20 * scale; // زيادة الحجم الأساسي للأيقونة
-      var fontSize = 12 * scale; // زيادة الحجم الأساسي للخط
-      var maxIconSize = 80; // الحد الأقصى لحجم الأيقونة
+      var baseZoom = 4; // مستوى التكبير الأساسي
+      var scaleFactor = zoom / baseZoom;
+
+      var baseIconSize = 20; // الحجم الأساسي للأيقونة عند مستوى التكبير الأساسي
+      var baseFontSize = 12; // الحجم الأساسي للخط عند مستوى التكبير الأساسي
+
+      var iconSize = baseIconSize * scaleFactor;
+      var fontSize = baseFontSize * scaleFactor;
+
+      var maxIconSize = 100; // الحد الأقصى لحجم الأيقونة
       var maxFontSize = 30; // الحد الأقصى لحجم الخط
 
       return {
