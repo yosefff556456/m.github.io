@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>خريطة جزيرة العرب</title>
+  <title>خريطة جزيرة العرب مع نقاط مخصصة</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- تضمين Leaflet CSS -->
@@ -20,11 +20,13 @@
 
   <!-- تضمين Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <!-- تضمين Papa Parse لتحليل CSV -->
+  <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
   <script>
     // تحديد حدود جزيرة العرب مع تمديدها قليلاً نحو الغرب والشمال
     var arabianBounds = L.latLngBounds(
-      [10.0, 30.0], // الزاوية الجنوبية الغربية (خط العرض، خط الطول) - تم التمديد جنوباً وغرباً
-      [35.0, 65.0]  // الزاوية الشمالية الشرقية - تم التمديد شمالاً وشرقاً
+      [10.0, 30.0], // الزاوية الجنوبية الغربية (خط العرض، خط الطول)
+      [35.0, 65.0]  // الزاوية الشمالية الشرقية
     );
 
     // تهيئة الخريطة وتحديد الموقع والزووم الافتراضي
@@ -66,14 +68,42 @@
     // خيار إضافي: تغيير موضع عناصر التحكم في التكبير/التصغير
     map.zoomControl.setPosition('topright');
 
-    // خيار إضافي: رسالة تنبيه عند الوصول إلى حدود التكبير/التصغير
-    map.on('zoomend', function() {
-      if (map.getZoom() === map.getMaxZoom()) {
-        console.log('لقد وصلت إلى أقصى مستوى للتكبير.');
-      } else if (map.getZoom() === map.getMinZoom()) {
-        console.log('لقد وصلت إلى أدنى مستوى للتصغير.');
-      }
+    // إنشاء أيقونة مخصصة
+    var battleIcon = L.icon({
+      iconUrl: 'battle.png', // تأكد من أن الصورة 'battle.png' موجودة في نفس مسار الملف
+      iconSize: [32, 32], // حجم الأيقونة (يمكنك تعديله)
+      iconAnchor: [16, 32], // نقطة تثبيت الأيقونة
+      popupAnchor: [0, -32] // موقع النافذة المنبثقة بالنسبة للأيقونة
     });
+
+    // وظيفة لتحميل بيانات CSV وإضافة النقاط إلى الخريطة
+    function loadCSVData() {
+      var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSNx5cQzCbAG4rUIQFsvnlVozC4jsofepc4hG1BQxyoUYaYZtQtXip8nMEoDP95cTMAJ5xtOwi-4qgU/pub?output=csv';
+
+      Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        complete: function(results) {
+          var data = results.data;
+          data.forEach(function(item) {
+            var lat = parseFloat(item.Latitude);
+            var lng = parseFloat(item.Longitude);
+            var name = item.Name;
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+              var marker = L.marker([lat, lng], { icon: battleIcon }).addTo(map);
+              marker.bindPopup('<b>' + name + '</b>');
+            }
+          });
+        },
+        error: function(err) {
+          console.error('حدث خطأ أثناء تحميل بيانات CSV:', err);
+        }
+      });
+    }
+
+    // استدعاء الوظيفة لتحميل البيانات
+    loadCSVData();
 
   </script>
 </body>
