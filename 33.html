@@ -7,7 +7,11 @@
   <!-- تضمين Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    #map { width: 100%; height: 600px; }
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
   </style>
 </head>
 <body>
@@ -18,40 +22,95 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
     // تهيئة الخريطة وتحديد الموقع والزووم الافتراضي
-    var map = L.map('map').setView([23.8859, 45.0792], 5); // إحداثيات مركز جزيرة العرب
+    var map = L.map('map', {
+      center: [23.8859, 45.0792],
+      zoom: 5,
+      zoomControl: false,
+      attributionControl: false
+    });
 
     // إضافة طبقة Esri World Imagery إلى الخريطة
     var Esri_WorldImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri'
+      attribution: ''
     }).addTo(map);
 
-    // مضلع يغطي العالم بأكمله
-    var worldPolygon = [
-      [
-        [-90, -180],
-        [-90, 180],
-        [90, 180],
-        [90, -180],
-        [-90, -180]
-      ],
-      // مضلع جزيرة العرب (ثقب)
-      [
-        [32.0, 35.0],
-        [32.0, 60.0],
-        [12.0, 60.0],
-        [12.0, 35.0],
-        [32.0, 35.0]
-      ]
-    ];
+    // تحميل بيانات GeoJSON لجزيرة العرب (إحداثيات أكثر دقة)
+    var arabianPeninsulaGeoJSON = {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [34.4957, 29.0994],
+            [34.9226, 29.5013],
+            [35.4209, 31.1001],
+            [35.3976, 31.5857],
+            [36.8638, 32.3129],
+            [38.7923, 33.3787],
+            [41.0062, 34.4194],
+            [44.2935, 33.3787],
+            [46.5687, 32.0835],
+            [48.5679, 29.9268],
+            [48.9413, 29.2845],
+            [48.5679, 28.5262],
+            [47.9745, 26.9909],
+            [47.3029, 24.9679],
+            [49.0238, 24.2610],
+            [51.5795, 24.2455],
+            [55.2749, 22.8119],
+            [55.2749, 19.0845],
+            [53.1086, 16.6511],
+            [52.0007, 15.0000],
+            [49.5746, 14.7088],
+            [46.8348, 14.6871],
+            [43.9818, 12.6996],
+            [42.3529, 12.5422],
+            [42.3516, 13.8669],
+            [42.7024, 15.7189],
+            [42.0000, 16.3479],
+            [39.0049, 18.0000],
+            [36.8662, 20.8374],
+            [35.0000, 22.0000],
+            [34.6323, 24.0000],
+            [34.6323, 27.8233],
+            [34.4957, 29.0994]
+          ]
+        ]
+      },
+      "properties": {}
+    };
 
-    // إنشاء المضلع مع الثقب
-    var maskPolygon = L.polygon(worldPolygon, {
-      color: '#ffffff',
-      fillColor: '#ffffff',
-      fillOpacity: 1,
+    // إنشاء طبقة قناع (Mask) لعكس الرؤية
+    var worldMask = {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-90, -180],
+            [-90, 180],
+            [90, 180],
+            [90, -180],
+            [-90, -180]
+          ],
+          arabianPeninsulaGeoJSON.geometry.coordinates[0]
+        ]
+      }
+    };
+
+    // إضافة القناع إلى الخريطة
+    L.geoJSON(worldMask, {
+      style: function(feature) {
+        return {
+          fillColor: '#ffffff',
+          fillOpacity: 1,
+          color: 'none'
+        };
+      },
       interactive: false
     }).addTo(map);
 
   </script>
 </body>
 </html>
+
