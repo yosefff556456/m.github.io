@@ -12,6 +12,20 @@
       margin: 0;
       padding: 0;
     }
+    .custom-marker {
+      text-align: center;
+    }
+    .custom-marker img {
+      display: block;
+      margin: 0 auto;
+    }
+    .custom-marker span {
+      display: block;
+      margin-top: 4px;
+      font-size: 14px;
+      color: #000;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -70,7 +84,7 @@
 
     // إنشاء أيقونة مخصصة
     var battleIcon = L.icon({
-      iconUrl: 'battle.png', // تأكد من أن الصورة 'battle.png' موجودة في نفس مسار الملف
+      iconUrl: 'swords.png', // تأكد من أن الصورة 'swords.png' موجودة في نفس مسار الملف
       iconSize: [32, 32], // حجم الأيقونة (يمكنك تعديله)
       iconAnchor: [16, 32], // نقطة تثبيت الأيقونة
       popupAnchor: [0, -32] // موقع النافذة المنبثقة بالنسبة للأيقونة
@@ -91,8 +105,22 @@
             var name = item.Name;
 
             if (!isNaN(lat) && !isNaN(lng)) {
-              var marker = L.marker([lat, lng], { icon: battleIcon }).addTo(map);
-              marker.bindPopup('<b>' + name + '</b>');
+              // إنشاء محتوى HTML للأيقونة المخصصة
+              var iconHtml = '<div class="custom-marker">' +
+                              '<img src="swords.png" alt="سيفين" width="32" height="32">' +
+                              '<span>' + name + '</span>' +
+                             '</div>';
+
+              // إنشاء DivIcon مع المحتوى المخصص
+              var customIcon = L.divIcon({
+                html: iconHtml,
+                className: '',
+                iconSize: [32, 48], // يمكن تعديل الحجم حسب الحاجة
+                iconAnchor: [16, 48] // ضبط نقطة التثبيت
+              });
+
+              // إضافة العلامة إلى الخريطة
+              var marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
             }
           });
         },
