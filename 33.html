@@ -24,7 +24,7 @@
 
     // دالة لجلب بيانات النوع من iNaturalist
     async function fetchSpeciesData(taxonId) {
-      const url = `https://api.inaturalist.org/v1/observations?taxon_id=${taxonId}&per_page=10000`;
+      const url = `https://api.inaturalist.org/v1/observations?taxon_id=${taxonId}&per_page=30000`;
       const response = await fetch(url);
       const data = await response.json();
       return data.results;
@@ -44,7 +44,7 @@
 
     // استدعاء الدوال لتحميل وعرض البيانات
     (async function() {
-      const taxonId = 319384; // معرف النوع المطلوب من iNaturalist
+      const taxonId = 67708; // معرف النوع المطلوب من iNaturalist
       const observations = await fetchSpeciesData(taxonId);
       addMarkersToMap(observations);
     })();
