@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>خريطة حرارية لنوع من iNaturalist</title>
+  <title>خريطة مواقع نوع من iNaturalist</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
   <style>
     #map { height: 100vh; }
@@ -13,7 +13,6 @@
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
   <script>
     // إعداد خريطة Leaflet
     const map = L.map('map').setView([23.8859, 45.0792], 6); // التركيز على السعودية
@@ -24,53 +23,30 @@
     }).addTo(map);
 
     // دالة لجلب بيانات النوع من iNaturalist
-    async function fetchAllObservations(taxonId) {
-      let observations = [];
-      let page = 1;
-      const perPage = 200;
-
-      while (true) {
-        const url = `https://api.inaturalist.org/v1/observations?taxon_id=${taxonId}&per_page=${perPage}&page=${page}`;
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.results.length === 0) break;
-        observations = observations.concat(data.results);
-        page++;
-      }
-      return observations;
+    async function fetchSpeciesData(taxonId) {
+      const url = `https://api.inaturalist.org/v1/observations?taxon_id=${taxonId}&per_page=100`;
+      const response = await fetch(url);
+      const data = await response.json();
+      return data.results;
     }
 
-    // دالة لإضافة البيانات إلى الخريطة كحرارة
-    function addHeatToMap(observations) {
-      const heatData = observations
-        .filter(obs => obs.geojson)
-        .map(obs => [
-          obs.geojson.coordinates[1], // خط العرض
-          obs.geojson.coordinates[0], // خط الطول
-          0.5 // الوزن (يمكنك تغييره لزيادة/تقليل كثافة النقطة)
-        ]);
-
-      // إعدادات خريطة الحرارة
-      const heatLayer = L.heatLayer(heatData, {
-        radius: 25,      // نصف قطر التأثير لكل نقطة
-        blur: 15,        // ضبابية النقاط
-        maxZoom: 10,     // الحد الأقصى للتكبير
-        max: 1.0,        // الشدة القصوى للحرارة
-        gradient: {      // ألوان التدرج الحراري
-          0.4: 'blue',
-          0.6: 'lime',
-          0.8: 'orange',
-          1.0: 'red'
+    // دالة لإضافة البيانات إلى الخريطة
+    function addMarkersToMap(observations) {
+      observations.forEach(obs => {
+        if (obs.geojson) {
+          const lat = obs.geojson.coordinates[1];
+          const lng = obs.geojson.coordinates[0];
+          L.marker([lat, lng]).addTo(map)
+            .bindPopup(`<strong>${obs.species_guess}</strong><br>التاريخ: ${obs.observed_on}`);
         }
-      }).addTo(map);
+      });
     }
 
     // استدعاء الدوال لتحميل وعرض البيانات
     (async function() {
-      const taxonId = 67708; // معرف النوع المطلوب من iNaturalist
-      const observations = await fetchAllObservations(taxonId);
-      addHeatToMap(observations);
+      const taxonId = 319384; // معرف النوع المطلوب من iNaturalist
+      const observations = await fetchSpeciesData(taxonId);
+      addMarkersToMap(observations);
     })();
   </script>
 </body>
