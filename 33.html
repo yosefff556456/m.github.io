@@ -1,53 +1,57 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html>
 <head>
-  <meta charset="UTF-8">
+  <title>خريطة جزيرة العرب</title>
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>خريطة مواقع نوع من iNaturalist</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <!-- تضمين Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    #map { height: 100vh; }
+    #map { width: 100%; height: 600px; }
   </style>
 </head>
 <body>
+  <!-- عنصر الخريطة -->
   <div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <!-- تضمين Leaflet JavaScript -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // إعداد خريطة Leaflet
-    const map = L.map('map').setView([23.8859, 45.0792], 6); // التركيز على السعودية
+    // تهيئة الخريطة وتحديد الموقع والزووم الافتراضي
+    var map = L.map('map').setView([23.8859, 45.0792], 5); // إحداثيات مركز جزيرة العرب
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: '© OpenStreetMap'
+    // إضافة طبقة Esri World Imagery إلى الخريطة
+    var Esri_WorldImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri'
     }).addTo(map);
 
-    // دالة لجلب بيانات النوع من iNaturalist
-    async function fetchSpeciesData(taxonId) {
-      const url = `https://api.inaturalist.org/v1/observations?taxon_id=${taxonId}&per_page=30000`;
-      const response = await fetch(url);
-      const data = await response.json();
-      return data.results;
-    }
+    // مضلع يغطي العالم بأكمله
+    var worldPolygon = [
+      [
+        [-90, -180],
+        [-90, 180],
+        [90, 180],
+        [90, -180],
+        [-90, -180]
+      ],
+      // مضلع جزيرة العرب (ثقب)
+      [
+        [32.0, 35.0],
+        [32.0, 60.0],
+        [12.0, 60.0],
+        [12.0, 35.0],
+        [32.0, 35.0]
+      ]
+    ];
 
-    // دالة لإضافة البيانات إلى الخريطة
-    function addMarkersToMap(observations) {
-      observations.forEach(obs => {
-        if (obs.geojson) {
-          const lat = obs.geojson.coordinates[1];
-          const lng = obs.geojson.coordinates[0];
-          L.marker([lat, lng]).addTo(map)
-            .bindPopup(`<strong>${obs.species_guess}</strong><br>التاريخ: ${obs.observed_on}`);
-        }
-      });
-    }
+    // إنشاء المضلع مع الثقب
+    var maskPolygon = L.polygon(worldPolygon, {
+      color: '#ffffff',
+      fillColor: '#ffffff',
+      fillOpacity: 1,
+      interactive: false
+    }).addTo(map);
 
-    // استدعاء الدوال لتحميل وعرض البيانات
-    (async function() {
-      const taxonId = 67708; // معرف النوع المطلوب من iNaturalist
-      const observations = await fetchSpeciesData(taxonId);
-      addMarkersToMap(observations);
-    })();
   </script>
 </body>
 </html>
