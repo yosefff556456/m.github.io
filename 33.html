@@ -14,15 +14,18 @@
     }
     .custom-marker {
       text-align: center;
+      transition: transform 0.1s ease, font-size 0.1s ease; /* إضافة تأثيرات انتقالية */
+      will-change: transform, font-size; /* تحسين الأداء */
     }
     .custom-marker img {
       display: block;
       margin: 0 auto;
+      width: 100%; /* سيتم التحكم في الحجم عبر CSS */
+      height: auto;
     }
     .custom-marker span {
       display: block;
       margin-top: 4px;
-      font-size: 14px;
       color: #fff;
       font-weight: bold;
       text-shadow:
@@ -30,6 +33,7 @@
         1px -1px 0 #000,
         -1px 1px 0 #000,
         1px 1px 0 #000;
+      transition: font-size 0.1s ease; /* إضافة تأثيرات انتقالية للنص */
     }
   </style>
 </head>
@@ -90,17 +94,35 @@
     // مصفوفة لتخزين العلامات لتحديثها عند تغيير مستوى التكبير
     var markers = [];
 
-    // وظيفة لحساب حجم الأيقونة والخط بناءً على مستوى التكبير
+    // وظيفة لحساب حجم الأيقونة والنص بناءً على مستوى التكبير
     function getMarkerSize(zoom) {
-      var size = zoom * 4; // تعديل هذا العامل لتغيير حجم الأيقونة
-      var fontSize = zoom * 2; // تعديل هذا العامل لتغيير حجم الخط
-      var maxSize = 64; // الحد الأقصى لحجم الأيقونة
-      var maxFontSize = 24; // الحد الأقصى لحجم الخط
+      var scale = Math.pow(1.5, zoom - 4); // تعديل عامل التكبير لجعل التغيير أكثر سلاسة
+      var iconSize = 20 * scale; // زيادة الحجم الأساسي للأيقونة
+      var fontSize = 12 * scale; // زيادة الحجم الأساسي للخط
+      var maxIconSize = 80; // الحد الأقصى لحجم الأيقونة
+      var maxFontSize = 30; // الحد الأقصى لحجم الخط
 
       return {
-        iconSize: size > maxSize ? maxSize : size,
+        iconSize: iconSize > maxIconSize ? maxIconSize : iconSize,
         fontSize: fontSize > maxFontSize ? maxFontSize : fontSize
       };
+    }
+
+    // وظيفة لإنشاء أو تحديث الأيقونة المخصصة
+    function createCustomIcon(name, sizes) {
+      var iconHtml = '<div class="custom-marker" style="font-size: ' + sizes.fontSize + 'px; width: ' + sizes.iconSize + 'px;">' +
+                      '<img src="battle.png" alt="معركة">' +
+                      '<span>' + name + '</span>' +
+                     '</div>';
+
+      var customIcon = L.divIcon({
+        html: iconHtml,
+        className: '',
+        iconSize: null,
+        iconAnchor: [sizes.iconSize / 2, sizes.iconSize],
+      });
+
+      return customIcon;
     }
 
     // وظيفة لتحميل بيانات CSV وإضافة النقاط إلى الخريطة
@@ -112,27 +134,16 @@
         header: true,
         complete: function(results) {
           var data = results.data;
+          var zoom = map.getZoom();
+          var sizes = getMarkerSize(zoom);
+
           data.forEach(function(item) {
             var lat = parseFloat(item.Latitude);
             var lng = parseFloat(item.Longitude);
             var name = item.Name;
 
             if (!isNaN(lat) && !isNaN(lng)) {
-              var sizes = getMarkerSize(map.getZoom());
-
-              // إنشاء محتوى HTML للأيقونة المخصصة
-              var iconHtml = '<div class="custom-marker" style="font-size: ' + sizes.fontSize + 'px;">' +
-                              '<img src="battle.png" alt="معركة" width="' + sizes.iconSize + '" height="' + sizes.iconSize + '">' +
-                              '<span>' + name + '</span>' +
-                             '</div>';
-
-              // إنشاء DivIcon مع المحتوى المخصص
-              var customIcon = L.divIcon({
-                html: iconHtml,
-                className: '',
-                iconSize: null,
-                iconAnchor: [sizes.iconSize / 2, sizes.iconSize], // ضبط نقطة التثبيت
-              });
+              var customIcon = createCustomIcon(name, sizes);
 
               // إضافة العلامة إلى الخريطة وتخزينها في المصفوفة
               var marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
@@ -155,22 +166,8 @@
       var sizes = getMarkerSize(zoom);
 
       markers.forEach(function(item) {
-        var lat = parseFloat(item.data.Latitude);
-        var lng = parseFloat(item.data.Longitude);
         var name = item.data.Name;
-
-        var iconHtml = '<div class="custom-marker" style="font-size: ' + sizes.fontSize + 'px;">' +
-                        '<img src="battle.png" alt="معركة" width="' + sizes.iconSize + '" height="' + sizes.iconSize + '">' +
-                        '<span>' + name + '</span>' +
-                       '</div>';
-
-        var customIcon = L.divIcon({
-          html: iconHtml,
-          className: '',
-          iconSize: null,
-          iconAnchor: [sizes.iconSize / 2, sizes.iconSize],
-        });
-
+        var customIcon = createCustomIcon(name, sizes);
         item.marker.setIcon(customIcon);
       });
     });
